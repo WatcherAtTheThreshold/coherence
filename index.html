@@ -1017,26 +1017,28 @@
             const title = document.getElementById('modal-title');
             const text = document.getElementById('modal-text');
             const buttons = document.getElementById('modal-buttons');
-            
+
             title.textContent = `ARTIFACT: ${artifact.name}`;
             text.innerHTML = `
                 ${artifact.description}<br><br>
                 <strong>IMMEDIATE: +${artifact.cohBonus} COHERENCE</strong>
             `;
-            
-            let buttonHTML = `<button onclick="acceptArtifact(${artifacts.indexOf(artifact)})" id="modal-primary-btn">ACCEPT</button>`;
-            
-            // If player already has an artifact, show trade/discard options
+
+            let buttonHTML = '';
+
+            // If player already has an artifact, show only trade/decline options
             if (gameState.carriedArtifact) {
-                buttonHTML += `<button class="danger" onclick="tradeArtifact(${artifacts.indexOf(artifact)})" id="modal-secondary-btn">TRADE</button>`;
-                buttonHTML += `<button class="secondary" onclick="declineArtifact()" id="modal-tertiary-btn">DECLINE</button>`;
+                buttonHTML = `<button class="danger" onclick="tradeArtifact(${artifacts.indexOf(artifact)})" id="modal-primary-btn">TRADE</button>`;
+                buttonHTML += `<button class="secondary" onclick="declineArtifact()" id="modal-secondary-btn">DECLINE</button>`;
             } else {
+                // First artifact: show accept/decline
+                buttonHTML = `<button onclick="acceptArtifact(${artifacts.indexOf(artifact)})" id="modal-primary-btn">ACCEPT</button>`;
                 buttonHTML += `<button class="secondary" onclick="declineArtifact()" id="modal-secondary-btn">DECLINE</button>`;
             }
-            
+
             buttons.innerHTML = buttonHTML;
             modal.classList.add('active');
-            
+
             // Focus first button
             setTimeout(() => {
                 document.getElementById('modal-primary-btn').focus();
