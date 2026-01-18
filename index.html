@@ -1046,38 +1046,36 @@
         // Accept artifact
         function acceptArtifact(index) {
             const artifact = artifacts[index];
-            
+
             if (gameState.carriedArtifact) {
                 // Can't accept if already carrying
-                showMessage('INVENTORY FULL', 'Trade or discard current artifact first', false);
                 return;
             }
-            
+
             gameState.carriedArtifact = artifact;
             gameState.hasArtifact = true; // Mark that player has collected an artifact
             gameState.coherence += artifact.cohBonus;
             gameState.grid[gameState.playerPos.y][gameState.playerPos.x] = '.';
-            
+
             document.getElementById('modal').classList.remove('active');
-            
+
             renderGrid();
             updateStatus();
         }
-        
+
         // Trade artifact
         function tradeArtifact(index) {
             const newArtifact = artifacts[index];
             gameState.carriedArtifact = newArtifact;
             gameState.coherence += newArtifact.cohBonus;
             gameState.grid[gameState.playerPos.y][gameState.playerPos.x] = '.';
-            
+
             document.getElementById('modal').classList.remove('active');
-            showMessage('ARTIFACT TRADED', `Now carrying: ${newArtifact.name}`, false);
-            
+
             renderGrid();
             updateStatus();
         }
-        
+
         // Decline artifact
         function declineArtifact() {
             document.getElementById('modal').classList.remove('active');
@@ -1157,12 +1155,41 @@
             const modalActive = document.getElementById('modal').classList.contains('active');
 
             if (modalActive) {
-                // Handle Enter key in modals
-                if (e.key === 'Enter') {
+                // Get all buttons in the modal
+                const buttons = document.getElementById('modal-buttons').querySelectorAll('button');
+                const focusedElement = document.activeElement;
+                let currentIndex = Array.from(buttons).indexOf(focusedElement);
+
+                // Handle Enter key in modals - click focused button
+                if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    const primaryBtn = document.getElementById('modal-primary-btn');
-                    if (primaryBtn) primaryBtn.click();
+                    if (focusedElement && focusedElement.tagName === 'BUTTON') {
+                        focusedElement.click();
+                    } else if (buttons.length > 0) {
+                        buttons[0].click();
+                    }
+                    return;
                 }
+
+                // Handle arrow keys and WASD for navigation
+                if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A' ||
+                    e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+                    e.preventDefault();
+                    if (currentIndex === -1) currentIndex = 0;
+                    else currentIndex = (currentIndex - 1 + buttons.length) % buttons.length;
+                    buttons[currentIndex].focus();
+                    return;
+                }
+
+                if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D' ||
+                    e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+                    e.preventDefault();
+                    if (currentIndex === -1) currentIndex = 0;
+                    else currentIndex = (currentIndex + 1) % buttons.length;
+                    buttons[currentIndex].focus();
+                    return;
+                }
+
                 return;
             }
             
