@@ -575,30 +575,106 @@
                 description: "Immune to distortion adjacency. Anchors no longer function.",
                 cohBonus: 6,
                 effect: "sever"
+            },
+            {
+                name: "TEMPORAL ECHO",
+                description: "Every 5th move is free. Time bends around you.",
+                cohBonus: 8,
+                effect: "echo"
+            },
+            {
+                name: "VOID COMPASS",
+                description: "Distortions spread slower. Coherence drain reduced by 1.",
+                cohBonus: 5,
+                effect: "compass"
+            },
+            {
+                name: "HARMONIC BEACON",
+                description: "Anchors restore +15 instead of +10. Attracts distortion faster.",
+                cohBonus: 4,
+                effect: "beacon"
             }
         ];
         
-        // Initial grid layout
-        const initialGrid = [
-            ['#','#','#','#','#','#','#','#','#','#','#','#','#'],
-            ['#','@','.','.','.','.','.','.','.','.','.','X','#'],
-            ['#','.','.','.','.','.','.','.','.','.','.','.','#'],
-            ['#','.','.','.','.','~','.','.','.','.','.','.','#'],
-            ['#','.','.','.','.','*','.','.','.','.','.','.','#'],
-            ['#','+','+','+','+','+','+','+','+','+','+','+','#'],
-            ['#','.','.','.','.','*','.','.','.','.','.','.','#'],
-            ['#','.','.','.','.','O','.','.','.','.','.','.','#'],
-            ['#','.','.','~','.','.','.','.','.','.','.','.','#'],
-            ['#','.','.','.','.','.','.','*','.','.','.','.','#'],
-            ['#','.','.','.','.','*','.','.','.','.','.','.','#'],
-            ['#','.','.','.','.','~','.','.','.','.','.','.','#'],
-            ['#','#','#','#','#','#','#','#','#','#','#','#','#']
-        ];
-        
+        // Generate random level
+        function generateLevel() {
+            const width = 13;
+            const height = 13;
+            const grid = [];
+
+            // Initialize with boundaries and ground
+            for (let y = 0; y < height; y++) {
+                grid[y] = [];
+                for (let x = 0; x < width; x++) {
+                    if (y === 0 || y === height - 1 || x === 0 || x === width - 1) {
+                        grid[y][x] = '#'; // Boundary
+                    } else {
+                        grid[y][x] = '.'; // Ground
+                    }
+                }
+            }
+
+            // Place threshold near middle (row 6 in 13x13 grid)
+            const thresholdRow = 6;
+            gameState.thresholdRow = thresholdRow;
+            for (let x = 1; x < width - 1; x++) {
+                grid[thresholdRow][x] = '+';
+            }
+
+            // Place player in top-left area (above threshold)
+            gameState.playerPos = { x: 1, y: 1 };
+
+            // Place exit in top-right area (above threshold)
+            grid[1][width - 2] = 'X';
+
+            // Place 1 artifact above threshold
+            const aboveY = Math.floor(Math.random() * (thresholdRow - 2)) + 2; // rows 2-5
+            const aboveX = Math.floor(Math.random() * (width - 4)) + 2; // avoid edges
+            grid[aboveY][aboveX] = '*';
+
+            // Place 3 artifacts below threshold
+            const belowArtifacts = [];
+            for (let i = 0; i < 3; i++) {
+                let x, y;
+                do {
+                    y = Math.floor(Math.random() * (height - thresholdRow - 3)) + thresholdRow + 1; // rows 7-11
+                    x = Math.floor(Math.random() * (width - 4)) + 2;
+                } while (grid[y][x] !== '.' || belowArtifacts.some(a => a.x === x && a.y === y));
+
+                grid[y][x] = '*';
+                belowArtifacts.push({ x, y });
+            }
+
+            // Place 2-3 anchors below threshold
+            const anchorCount = Math.floor(Math.random() * 2) + 2; // 2 or 3
+            for (let i = 0; i < anchorCount; i++) {
+                let x, y;
+                do {
+                    y = Math.floor(Math.random() * (height - thresholdRow - 3)) + thresholdRow + 1;
+                    x = Math.floor(Math.random() * (width - 4)) + 2;
+                } while (grid[y][x] !== '.');
+
+                grid[y][x] = 'O';
+            }
+
+            // Place 3-5 initial distortions scattered throughout
+            const distortionCount = Math.floor(Math.random() * 3) + 3; // 3 to 5
+            for (let i = 0; i < distortionCount; i++) {
+                let x, y;
+                do {
+                    y = Math.floor(Math.random() * (height - 4)) + 2; // rows 2-11
+                    x = Math.floor(Math.random() * (width - 4)) + 2;
+                } while (grid[y][x] !== '.' || (y === thresholdRow));
+
+                grid[y][x] = '~';
+            }
+
+            return grid;
+        }
+
         // Initialize game
         function initGame() {
-            gameState.grid = initialGrid.map(row => [...row]);
-            gameState.grid[gameState.playerPos.y][gameState.playerPos.x] = '.';
+            gameState.grid = generateLevel();
             renderGrid();
             updateStatus();
         }
@@ -703,15 +779,22 @@
         // Process a game turn
         function processTurn() {
             gameState.turnCounter++;
-            
+
             // Base movement cost
             let cohCost = 1;
-            
-            // Clarity lens effect
+
+            // Clarity lens effect: +1 drain per turn
             if (gameState.carriedArtifact && gameState.carriedArtifact.effect === 'clarity') {
                 cohCost += 1;
             }
-            
+
+            // Temporal Echo effect: Every 5th move is free
+            if (gameState.carriedArtifact && gameState.carriedArtifact.effect === 'echo') {
+                if (gameState.turnCounter % 5 === 0) {
+                    cohCost = 0;
+                }
+            }
+
             gameState.coherence -= cohCost;
             
             // Check current tile
@@ -732,9 +815,11 @@
                 if (!gameState.carriedArtifact || gameState.carriedArtifact.effect !== 'sever') {
                     const invert = gameState.carriedArtifact && gameState.carriedArtifact.effect === 'invert';
                     if (!invert) {
-                        gameState.coherence += 10;
+                        // Harmonic Beacon: +15 instead of +10
+                        const anchorBonus = (gameState.carriedArtifact && gameState.carriedArtifact.effect === 'beacon') ? 15 : 10;
+                        gameState.coherence += anchorBonus;
                         gameState.grid[gameState.playerPos.y][gameState.playerPos.x] = '.';
-                        showMessage('ANCHOR ACTIVATED', '+10 COHERENCE', false);
+                        showMessage('ANCHOR ACTIVATED', `+${anchorBonus} COHERENCE`, false);
                     }
                 } else {
                     // Severance: anchor doesn't work
@@ -778,24 +863,31 @@
             const px = gameState.playerPos.x;
             const py = gameState.playerPos.y;
             const currentTile = gameState.grid[py][px];
-            
+
             // If carrying severance artifact, immune to distortion
             if (gameState.carriedArtifact && gameState.carriedArtifact.effect === 'sever') {
                 return;
             }
-            
+
             const invert = gameState.carriedArtifact && gameState.carriedArtifact.effect === 'invert';
-            
+            const hasCompass = gameState.carriedArtifact && gameState.carriedArtifact.effect === 'compass';
+
             // Standing on distortion
             if (currentTile === '~') {
+                let drain = 2;
+                // Void Compass: reduce drain by 1
+                if (hasCompass && !invert) {
+                    drain = 1;
+                }
+
                 if (!invert) {
-                    gameState.coherence -= 2;
+                    gameState.coherence -= drain;
                 } else {
                     gameState.coherence += 2; // Inverted: distortion heals
                 }
                 return;
             }
-            
+
             // Check adjacent tiles (cardinal only)
             const adjacent = [
                 {x: px-1, y: py},
@@ -803,13 +895,19 @@
                 {x: px, y: py-1},
                 {x: px, y: py+1}
             ];
-            
+
             for (let pos of adjacent) {
-                if (pos.y >= 0 && pos.y < gameState.grid.length && 
+                if (pos.y >= 0 && pos.y < gameState.grid.length &&
                     pos.x >= 0 && pos.x < gameState.grid[pos.y].length) {
                     if (gameState.grid[pos.y][pos.x] === '~') {
+                        let drain = 1;
+                        // Void Compass: reduce drain by 1 (to 0 for adjacency)
+                        if (hasCompass && !invert) {
+                            drain = 0;
+                        }
+
                         if (!invert) {
-                            gameState.coherence -= 1;
+                            gameState.coherence -= drain;
                         } else {
                             gameState.coherence += 1; // Inverted: adjacency heals
                         }
@@ -819,39 +917,91 @@
             }
         }
         
-        // Spread distortions
-        function spreadDistortions() {
-            const distortions = [];
-            
-            // Find all current distortions
-            for (let y = 0; y < gameState.grid.length; y++) {
-                for (let x = 0; x < gameState.grid[y].length; x++) {
-                    if (gameState.grid[y][x] === '~') {
-                        distortions.push({x, y});
+        // Count how many distortion neighbors a tile has
+        function countDistortedNeighbors(x, y) {
+            let count = 0;
+            const neighbors = [
+                {x: x - 1, y: y},
+                {x: x + 1, y: y},
+                {x: x, y: y - 1},
+                {x: x, y: y + 1}
+            ];
+
+            for (let pos of neighbors) {
+                if (pos.y >= 0 && pos.y < gameState.grid.length &&
+                    pos.x >= 0 && pos.x < gameState.grid[pos.y].length) {
+                    if (gameState.grid[pos.y][pos.x] === '~') {
+                        count++;
                     }
                 }
             }
-            
-            // Spawn new distortions
-            for (let distortion of distortions) {
-                const directions = [
-                    {x: -1, y: 0},
-                    {x: 1, y: 0},
-                    {x: 0, y: -1},
-                    {x: 0, y: 1}
-                ];
-                
-                // Pick random direction
-                const dir = directions[Math.floor(Math.random() * directions.length)];
-                const newX = distortion.x + dir.x;
-                const newY = distortion.y + dir.y;
-                
-                // Spawn if valid and empty
-                if (newY >= 0 && newY < gameState.grid.length &&
-                    newX >= 0 && newX < gameState.grid[newY].length &&
-                    gameState.grid[newY][newX] === '.') {
-                    gameState.grid[newY][newX] = '~';
+
+            return count;
+        }
+
+        // Spread distortions using "Coral Growth" algorithm
+        function spreadDistortions() {
+            // Get spread rate based on artifacts
+            let spreadCount = 1; // Default: one spread per cycle
+
+            // Harmonic Beacon: distortions spread faster (2 per cycle)
+            if (gameState.carriedArtifact && gameState.carriedArtifact.effect === 'beacon') {
+                spreadCount = 2;
+            }
+
+            // Void Compass: distortions spread slower (1 every 2 cycles)
+            if (gameState.carriedArtifact && gameState.carriedArtifact.effect === 'compass') {
+                if (gameState.turnCounter % 6 !== 0) {
+                    return; // Skip spreading this cycle
                 }
+            }
+
+            // Find all potential growth candidates
+            const candidates = [];
+
+            for (let y = 0; y < gameState.grid.length; y++) {
+                for (let x = 0; x < gameState.grid[y].length; x++) {
+                    if (gameState.grid[y][x] === '~') {
+                        // Check all neighbors of this distortion
+                        const neighbors = [
+                            {x: x - 1, y: y},
+                            {x: x + 1, y: y},
+                            {x: x, y: y - 1},
+                            {x: x, y: y + 1}
+                        ];
+
+                        for (let neighbor of neighbors) {
+                            const nx = neighbor.x;
+                            const ny = neighbor.y;
+
+                            // Check if neighbor is valid and empty
+                            if (ny >= 0 && ny < gameState.grid.length &&
+                                nx >= 0 && nx < gameState.grid[ny].length &&
+                                gameState.grid[ny][nx] === '.') {
+
+                                // Apply Coral Growth Rule: only allow spread if target has < 2 distortion neighbors
+                                const neighborCount = countDistortedNeighbors(nx, ny);
+
+                                if (neighborCount < 2) {
+                                    // This preserves navigable paths
+                                    candidates.push({x: nx, y: ny, neighborCount: neighborCount});
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Execute spreads (one or more based on artifact effects)
+            for (let i = 0; i < spreadCount && candidates.length > 0; i++) {
+                // Pick a random valid candidate
+                const chosenIndex = Math.floor(Math.random() * candidates.length);
+                const chosen = candidates[chosenIndex];
+
+                gameState.grid[chosen.y][chosen.x] = '~';
+
+                // Remove this candidate to avoid duplicate spreads
+                candidates.splice(chosenIndex, 1);
             }
         }
         
