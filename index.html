@@ -521,10 +521,15 @@
         const audioMain = document.getElementById('music-main');
         const audioThreshold = document.getElementById('music-threshold');
         let audioInitialized = false;
+        let audioContext = null;
 
         function initAudio() {
             audioMain.volume = 0.5;
             audioThreshold.volume = 0.5;
+
+            // Initialize Web Audio API context for sound effects
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
             audioMain.play().then(() => {
                 audioInitialized = true;
                 document.getElementById('audio-init').classList.add('hidden');
@@ -539,6 +544,110 @@
             if (!audioInitialized) return;
             audioMain.pause();
             audioThreshold.play().catch(err => console.log('Threshold music error:', err));
+        }
+
+        // Procedural sound effects using Web Audio API
+        function playSound(type) {
+            if (!audioContext) return;
+
+            const now = audioContext.currentTime;
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            switch(type) {
+                case 'move':
+                    // Soft blip for movement
+                    oscillator.frequency.setValueAtTime(200, now);
+                    oscillator.frequency.exponentialRampToValueAtTime(100, now + 0.05);
+                    gainNode.gain.setValueAtTime(0.1, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.05);
+                    break;
+
+                case 'artifact':
+                    // Ascending chime for artifact pickup
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(400, now);
+                    oscillator.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+                    oscillator.frequency.exponentialRampToValueAtTime(1200, now + 0.2);
+                    gainNode.gain.setValueAtTime(0.2, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.3);
+                    break;
+
+                case 'anchor':
+                    // Warm restoration tone
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(300, now);
+                    oscillator.frequency.setValueAtTime(400, now + 0.05);
+                    oscillator.frequency.setValueAtTime(500, now + 0.1);
+                    gainNode.gain.setValueAtTime(0.15, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.2);
+                    break;
+
+                case 'distortion':
+                    // Harsh digital noise for distortion damage
+                    oscillator.type = 'sawtooth';
+                    oscillator.frequency.setValueAtTime(150, now);
+                    oscillator.frequency.exponentialRampToValueAtTime(80, now + 0.15);
+                    gainNode.gain.setValueAtTime(0.08, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.15);
+                    break;
+
+                case 'threshold':
+                    // Ominous low tone for crossing threshold
+                    oscillator.type = 'triangle';
+                    oscillator.frequency.setValueAtTime(100, now);
+                    oscillator.frequency.exponentialRampToValueAtTime(60, now + 0.4);
+                    gainNode.gain.setValueAtTime(0.2, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.4);
+                    break;
+
+                case 'collision':
+                    // Sharp hit for wall collision
+                    oscillator.type = 'square';
+                    oscillator.frequency.setValueAtTime(100, now);
+                    gainNode.gain.setValueAtTime(0.15, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.08);
+                    break;
+
+                case 'exit':
+                    // Victory fanfare
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(500, now);
+                    oscillator.frequency.setValueAtTime(600, now + 0.1);
+                    oscillator.frequency.setValueAtTime(800, now + 0.2);
+                    oscillator.frequency.setValueAtTime(1000, now + 0.3);
+                    gainNode.gain.setValueAtTime(0.2, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.5);
+                    break;
+
+                case 'death':
+                    // Descending failure tone
+                    oscillator.type = 'sawtooth';
+                    oscillator.frequency.setValueAtTime(300, now);
+                    oscillator.frequency.exponentialRampToValueAtTime(50, now + 0.5);
+                    gainNode.gain.setValueAtTime(0.2, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.5);
+                    break;
+            }
         }
 
         // Game State
@@ -761,17 +870,21 @@
             // Check boundaries
             if (gameState.grid[newY][newX] === '#') {
                 // Glitch effect on collision
+                playSound('collision');
                 document.getElementById('grid').classList.add('glitch');
                 setTimeout(() => {
                     document.getElementById('grid').classList.remove('glitch');
                 }, 300);
                 return;
             }
-            
+
             // Move player
             gameState.playerPos.x = newX;
             gameState.playerPos.y = newY;
-            
+
+            // Play movement sound
+            playSound('move');
+
             // Process turn
             processTurn();
         }
@@ -819,6 +932,7 @@
                         const anchorBonus = (gameState.carriedArtifact && gameState.carriedArtifact.effect === 'beacon') ? 15 : 10;
                         gameState.coherence += anchorBonus;
                         gameState.grid[gameState.playerPos.y][gameState.playerPos.x] = '.';
+                        playSound('anchor');
                         // No pop-up, just apply the effect silently
                     }
                 }
@@ -834,6 +948,7 @@
             // Threshold crossing check
             if (currentTile === '+' && !gameState.belowThreshold) {
                 gameState.belowThreshold = true;
+                playSound('threshold');
                 switchToThresholdMusic();
                 // No pop-up, just switch music and activate distortion spreading
             }
@@ -880,6 +995,7 @@
 
                 if (!invert) {
                     gameState.coherence -= drain;
+                    playSound('distortion');
                 } else {
                     gameState.coherence += 2; // Inverted: distortion heals
                 }
@@ -1059,6 +1175,7 @@
             gameState.coherence += artifact.cohBonus;
             gameState.grid[gameState.playerPos.y][gameState.playerPos.x] = '.';
 
+            playSound('artifact');
             document.getElementById('modal').classList.remove('active');
 
             renderGrid();
@@ -1072,6 +1189,7 @@
             gameState.coherence += newArtifact.cohBonus;
             gameState.grid[gameState.playerPos.y][gameState.playerPos.x] = '.';
 
+            playSound('artifact');
             document.getElementById('modal').classList.remove('active');
 
             renderGrid();
@@ -1118,7 +1236,9 @@
         function winGame() {
             gameState.gameOver = true;
             gameState.won = true;
-            
+
+            playSound('exit');
+
             let message = '';
             if (gameState.coherence >= 15) {
                 message = 'YOU EMERGED WHOLE • SIGNAL PRESERVED';
@@ -1127,13 +1247,14 @@
             } else {
                 message = 'YOU ESCAPED WITH FRAGMENTS • BARELY COHERENT';
             }
-            
+
             showMessage('TRANSMISSION COMPLETE', message, true);
         }
-        
+
         // Lose game
         function loseGame() {
             gameState.gameOver = true;
+            playSound('death');
             showMessage('SIGNAL LOST', 'DISSOLUTION • COHERENCE COLLAPSED', true);
         }
         
