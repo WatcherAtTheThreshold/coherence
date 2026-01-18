@@ -127,6 +127,50 @@ You gave everything.
 Next time, maybe leave something for yourself."
 ```
 
+## Tier 4: Four Artifacts (Beyond Everything)
+
+### High Coherence (12+)
+
+```
+TRANSMISSION COMPLETE
+
+ARTIFACTS RECOVERED: 4
+COHERENCE REMAINING: 15
+
+"You went back for more than was asked.
+You stayed whole through all of it.
+Either you're very good at this, or very lucky.
+Don't assume it was luck."
+```
+
+### Medium Coherence (6-11)
+
+```
+TRANSMISSION COMPLETE
+
+ARTIFACTS RECOVERED: 4
+COHERENCE REMAINING: 7
+
+"You went back for more than was asked.
+You found them all.
+The cost was real, but you're still standing.
+Just barely."
+```
+
+### Low Coherence (1-5)
+
+```
+TRANSMISSION COMPLETE
+
+ARTIFACTS RECOVERED: 4
+COHERENCE REMAINING: 1
+
+"You went back for more than was asked.
+You found them all.
+There's almost nothing left of you.
+Was proving something worth this?"
+```
+
 ***
 
 ## The Vibe Check 💭
@@ -136,5 +180,6 @@ Notice how:
 * **Tier 1** frames "good enough" as *wisdom*, not failure
 * **Tier 2** celebrates finding balance
 * **Tier 3** questions whether completionism was worth it (except in the rare high-coh case where you somehow pulled it off)
+* **Tier 4** acknowledges going beyond requirements - with respect at high coherence, concern at low
 
 The game is quietly saying: **"Going for 100% usually costs too much."**
