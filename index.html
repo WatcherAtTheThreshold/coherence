@@ -126,7 +126,7 @@
         
         #grid {
             display: grid;
-            grid-template-columns: repeat(13, 1fr);
+            grid-template-columns: repeat(16, 1fr);
             gap: 2px;
             background: rgba(0, 0, 0, 0.6);
             padding: 1rem;
@@ -707,8 +707,8 @@
         
         // Generate random level
         function generateLevel() {
-            const width = 13;
-            const height = 13;
+            const width = 16;
+            const height = 16;
             const grid = [];
 
             // Initialize with boundaries and ground
@@ -723,8 +723,8 @@
                 }
             }
 
-            // Place threshold near middle (row 6 in 13x13 grid)
-            const thresholdRow = 6;
+            // Place threshold near middle (row 8 in 16x16 grid)
+            const thresholdRow = 8;
             gameState.thresholdRow = thresholdRow;
             for (let x = 1; x < width - 1; x++) {
                 grid[thresholdRow][x] = '+';
@@ -737,7 +737,7 @@
             grid[1][width - 2] = 'X';
 
             // Place 1 artifact above threshold
-            const aboveY = Math.floor(Math.random() * (thresholdRow - 2)) + 2; // rows 2-5
+            const aboveY = Math.floor(Math.random() * (thresholdRow - 2)) + 2; // rows 2-7
             const aboveX = Math.floor(Math.random() * (width - 4)) + 2; // avoid edges
             grid[aboveY][aboveX] = '*';
 
@@ -746,7 +746,7 @@
             for (let i = 0; i < 3; i++) {
                 let x, y;
                 do {
-                    y = Math.floor(Math.random() * (height - thresholdRow - 3)) + thresholdRow + 1; // rows 7-11
+                    y = Math.floor(Math.random() * (height - thresholdRow - 3)) + thresholdRow + 1; // rows 9-14
                     x = Math.floor(Math.random() * (width - 4)) + 2;
                 } while (grid[y][x] !== '.' || belowArtifacts.some(a => a.x === x && a.y === y));
 
@@ -754,8 +754,8 @@
                 belowArtifacts.push({ x, y });
             }
 
-            // Place 2-3 anchors below threshold
-            const anchorCount = Math.floor(Math.random() * 2) + 2; // 2 or 3
+            // Place 3-4 anchors below threshold (more anchors for larger grid)
+            const anchorCount = Math.floor(Math.random() * 2) + 3; // 3 or 4
             for (let i = 0; i < anchorCount; i++) {
                 let x, y;
                 do {
@@ -766,12 +766,12 @@
                 grid[y][x] = 'O';
             }
 
-            // Place 3-5 initial distortions scattered throughout
-            const distortionCount = Math.floor(Math.random() * 3) + 3; // 3 to 5
+            // Place 4-6 initial distortions scattered throughout (more for larger grid)
+            const distortionCount = Math.floor(Math.random() * 3) + 4; // 4 to 6
             for (let i = 0; i < distortionCount; i++) {
                 let x, y;
                 do {
-                    y = Math.floor(Math.random() * (height - 4)) + 2; // rows 2-11
+                    y = Math.floor(Math.random() * (height - 4)) + 2; // rows 2-14
                     x = Math.floor(Math.random() * (width - 4)) + 2;
                 } while (grid[y][x] !== '.' || (y === thresholdRow));
 
