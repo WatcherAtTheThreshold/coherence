@@ -45,7 +45,7 @@
             padding: 1rem;
         }
 
-        /* Subtle grain texture */
+        /* Subtle grain texture - only visible in stressed state */
         body::before {
             content: '';
             position: fixed;
@@ -53,9 +53,15 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.015'/%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.4' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.02'/%3E%3C/svg%3E");
             pointer-events: none;
             z-index: 1000;
+            opacity: 0;
+            transition: opacity 2s ease;
+        }
+
+        body.stressed::before {
+            opacity: 1;
         }
 
         .container {
@@ -499,11 +505,32 @@
             fadeStep();
         }
 
+        // Sound throttling to prevent crackling
+        const soundCooldowns = {
+            place: 0,
+            slide: 0,
+            crack: 0,
+            settle: 0
+        };
+        const soundMinIntervals = {
+            place: 100,   // ms between place sounds
+            slide: 200,   // ms between slide sounds
+            crack: 300,   // ms between crack sounds
+            settle: 500   // ms between settle sounds
+        };
+
         // Procedural sounds
         function playSound(type) {
             if (!audioContext) return;
 
-            const now = audioContext.currentTime;
+            // Throttle sounds to prevent crackling
+            const now = Date.now();
+            if (now - soundCooldowns[type] < soundMinIntervals[type]) {
+                return; // Too soon, skip this sound
+            }
+            soundCooldowns[type] = now;
+
+            const audioTime = audioContext.currentTime;
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
 
@@ -513,43 +540,43 @@
             switch(type) {
                 case 'place':
                     oscillator.type = 'sine';
-                    oscillator.frequency.setValueAtTime(150, now);
-                    oscillator.frequency.exponentialRampToValueAtTime(80, now + 0.1);
-                    gainNode.gain.setValueAtTime(0.08, now);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-                    oscillator.start(now);
-                    oscillator.stop(now + 0.1);
+                    oscillator.frequency.setValueAtTime(150, audioTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(80, audioTime + 0.1);
+                    gainNode.gain.setValueAtTime(0.06, audioTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioTime + 0.1);
+                    oscillator.start(audioTime);
+                    oscillator.stop(audioTime + 0.1);
                     break;
 
                 case 'slide':
                     oscillator.type = 'triangle';
-                    oscillator.frequency.setValueAtTime(100, now);
-                    oscillator.frequency.exponentialRampToValueAtTime(60, now + 0.15);
-                    gainNode.gain.setValueAtTime(0.05, now);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
-                    oscillator.start(now);
-                    oscillator.stop(now + 0.15);
+                    oscillator.frequency.setValueAtTime(100, audioTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(60, audioTime + 0.15);
+                    gainNode.gain.setValueAtTime(0.03, audioTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioTime + 0.15);
+                    oscillator.start(audioTime);
+                    oscillator.stop(audioTime + 0.15);
                     break;
 
                 case 'crack':
                     oscillator.type = 'sawtooth';
-                    oscillator.frequency.setValueAtTime(200, now);
-                    oscillator.frequency.exponentialRampToValueAtTime(50, now + 0.08);
-                    gainNode.gain.setValueAtTime(0.1, now);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
-                    oscillator.start(now);
-                    oscillator.stop(now + 0.08);
+                    oscillator.frequency.setValueAtTime(200, audioTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(50, audioTime + 0.08);
+                    gainNode.gain.setValueAtTime(0.07, audioTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioTime + 0.08);
+                    oscillator.start(audioTime);
+                    oscillator.stop(audioTime + 0.08);
                     break;
 
                 case 'settle':
                     oscillator.type = 'sine';
-                    oscillator.frequency.setValueAtTime(200, now);
-                    oscillator.frequency.setValueAtTime(250, now + 0.05);
-                    oscillator.frequency.setValueAtTime(200, now + 0.1);
-                    gainNode.gain.setValueAtTime(0.06, now);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-                    oscillator.start(now);
-                    oscillator.stop(now + 0.2);
+                    oscillator.frequency.setValueAtTime(200, audioTime);
+                    oscillator.frequency.setValueAtTime(250, audioTime + 0.05);
+                    oscillator.frequency.setValueAtTime(200, audioTime + 0.1);
+                    gainNode.gain.setValueAtTime(0.04, audioTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioTime + 0.2);
+                    oscillator.start(audioTime);
+                    oscillator.stop(audioTime + 0.2);
                     break;
             }
         }
@@ -1079,14 +1106,17 @@
                 statusText.textContent = 'stillness';
                 statusText.classList.add('coherent');
                 coherenceField.classList.remove('low');
+                document.body.classList.remove('stressed');
             } else if (state.coherence > 35) {
                 statusText.textContent = 'settling';
                 statusText.classList.add('unsettled');
                 coherenceField.classList.remove('low');
+                document.body.classList.remove('stressed');
             } else {
                 statusText.textContent = 'turbulence';
                 statusText.classList.add('chaotic');
                 coherenceField.classList.add('low');
+                document.body.classList.add('stressed');
             }
         }
 
