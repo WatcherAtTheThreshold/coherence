@@ -306,7 +306,7 @@
             const appearance = characterSprites.bodies[Math.floor(Math.random() * characterSprites.bodies.length)];
             return {
                 x: isPlayer ? canvas.width / 2 : canvas.width + 50,
-                y: isPlayer ? game.stall.counterY - 40 : game.stall.counterY + 60,
+                y: isPlayer ? game.stall.counterY - 10 : game.stall.counterY + 70,
                 width: 24,
                 height: 32,
                 ...appearance,
@@ -675,27 +675,33 @@
             // Draw animals (behind stall)
             drawAnimals();
 
-            // Draw customers
+            // Draw stall back wall and awning first
+            drawStallBack();
+
+            // Draw player (behind counter)
+            drawCharacter(game.player);
+
+            // Draw cubes on shelf (behind counter)
+            for (const cube of game.cubes) {
+                if (cube !== game.dragging && cube.onShelf) {
+                    drawCube(cube);
+                }
+            }
+
+            // Draw counter (in front of player and shelf cubes)
+            drawStallCounter();
+
+            // Draw customers (in front of counter)
             for (const customer of game.customers) {
                 drawCharacter(customer);
-                if (customer.order && customer.order.length > 0 && !customer.leaving) {
+                if (customer.satisfied && customer.leaving) {
+                    drawHeartBubble(customer);
+                } else if (customer.order && customer.order.length > 0 && !customer.leaving) {
                     drawOrderBubble(customer);
                 }
             }
 
-            // Draw stall
-            drawStall();
-
-            // Draw player
-            drawCharacter(game.player);
-
-            // Draw cubes
-            for (const cube of game.cubes) {
-                if (cube !== game.dragging) {
-                    drawCube(cube);
-                }
-            }
-            // Draw dragged cube on top
+            // Draw dragged cube on top of everything
             if (game.dragging) {
                 drawCube(game.dragging);
             }
@@ -772,7 +778,7 @@
             ctx.fillRect(100, 350, 400, 150);
         }
 
-        function drawStall() {
+        function drawStallBack() {
             // Back wall
             ctx.fillStyle = '#5a4a3a';
             ctx.fillRect(120, 240, 360, 100);
@@ -787,15 +793,7 @@
                 ctx.stroke();
             }
 
-            // Counter top
-            ctx.fillStyle = '#7a6a5a';
-            ctx.fillRect(100, game.stall.counterY, 400, game.stall.counterHeight);
-
-            // Counter front
-            ctx.fillStyle = '#6a5a4a';
-            ctx.fillRect(100, game.stall.counterY + game.stall.counterHeight, 400, 30);
-
-            // Shelf
+            // Shelf (behind cubes)
             ctx.fillStyle = '#5a4a3a';
             ctx.fillRect(140, game.stall.shelfY - 5, 320, 8);
 
@@ -810,6 +808,44 @@
                 ctx.lineTo(110 + i * 50, 240);
                 ctx.fill();
             }
+        }
+
+        function drawStallCounter() {
+            // Counter top
+            ctx.fillStyle = '#7a6a5a';
+            ctx.fillRect(100, game.stall.counterY, 400, game.stall.counterHeight);
+
+            // Counter front
+            ctx.fillStyle = '#6a5a4a';
+            ctx.fillRect(100, game.stall.counterY + game.stall.counterHeight, 400, 30);
+        }
+
+        function drawHeartBubble(customer) {
+            const bubbleX = customer.x;
+            const bubbleY = customer.y - 55;
+
+            // Bubble background
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.beginPath();
+            ctx.arc(bubbleX, bubbleY, 15, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Bubble tail
+            ctx.beginPath();
+            ctx.moveTo(bubbleX - 5, bubbleY + 12);
+            ctx.lineTo(bubbleX + 5, bubbleY + 12);
+            ctx.lineTo(bubbleX, bubbleY + 20);
+            ctx.fill();
+
+            // Draw heart
+            ctx.fillStyle = '#e06080';
+            ctx.beginPath();
+            // Left half of heart
+            ctx.moveTo(bubbleX, bubbleY + 4);
+            ctx.bezierCurveTo(bubbleX - 8, bubbleY - 6, bubbleX - 12, bubbleY + 2, bubbleX, bubbleY + 10);
+            // Right half of heart
+            ctx.bezierCurveTo(bubbleX + 12, bubbleY + 2, bubbleX + 8, bubbleY - 6, bubbleX, bubbleY + 4);
+            ctx.fill();
         }
 
         function drawCharacter(char) {
