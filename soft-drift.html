@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOFT DRIFT</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Cormorant+Garamond:wght@400;600&display=swap');
+
+        :root {
+            --earth-deep: #1a1612;
+            --earth-warm: #2d2620;
+            --dawn: #e8d4c4;
+            --morning: #f5e6d3;
+            --midday: #fff8f0;
+            --afternoon: #f0e0c8;
+            --dusk: #d4a574;
+            --evening: #8b6b4a;
+            --night: #2a2520;
+            --text-dim: #6b635a;
+            --text-bright: #d4cdc0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'IBM Plex Mono', monospace;
+            background: var(--earth-deep);
+            color: var(--text-bright);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            position: relative;
+            text-align: center;
+        }
+
+        header {
+            margin-bottom: 1rem;
+            animation: fadeIn 1.5s ease-out;
+        }
+
+        h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            font-weight: 400;
+            letter-spacing: 0.4rem;
+            text-transform: uppercase;
+            color: var(--dawn);
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: clamp(0.65rem, 1.5vw, 0.8rem);
+            color: var(--text-dim);
+            letter-spacing: 0.25rem;
+            text-transform: lowercase;
+            font-style: italic;
+        }
+
+        #game-container {
+            background: var(--earth-warm);
+            border: 1px solid #3d3832;
+            padding: 0;
+            border-radius: 2px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 1.5s ease-out 0.3s both;
+            display: inline-block;
+            overflow: hidden;
+        }
+
+        #game-canvas {
+            display: block;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        #day-indicator {
+            margin-top: 1rem;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            letter-spacing: 0.2rem;
+        }
+
+        .instructions {
+            margin-top: 0.75rem;
+            font-size: clamp(0.6rem, 1.3vw, 0.75rem);
+            color: var(--text-dim);
+            letter-spacing: 0.1rem;
+            font-style: italic;
+        }
+
+        /* Audio init overlay */
+        #audio-init {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--earth-deep);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            transition: opacity 1s ease;
+        }
+
+        #audio-init.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .init-content {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .init-content h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            font-weight: 400;
+            letter-spacing: 0.3rem;
+            color: var(--dawn);
+            margin-bottom: 1rem;
+        }
+
+        .init-content p {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            margin-bottom: 1.5rem;
+            font-style: italic;
+        }
+
+        .init-content button {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.9rem;
+            padding: 0.75rem 2rem;
+            background: transparent;
+            border: 1px solid var(--dawn);
+            color: var(--dawn);
+            cursor: pointer;
+            transition: all 0.5s ease;
+            text-transform: lowercase;
+            letter-spacing: 0.2rem;
+        }
+
+        .init-content button:hover,
+        .init-content button:focus {
+            background: var(--dawn);
+            color: var(--earth-deep);
+            outline: none;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Audio init overlay -->
+    <div id="audio-init">
+        <div class="init-content">
+            <h2>Soft Drift</h2>
+            <p>a small stall, quiet days</p>
+            <button id="init-audio-btn" onclick="initGame()" autofocus>open shop</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Soft Drift</h1>
+            <div class="subtitle">tend the stall</div>
+        </header>
+
+        <div id="game-container">
+            <canvas id="game-canvas" width="600" height="500"></canvas>
+        </div>
+
+        <div id="day-indicator">day 1</div>
+        <div class="instructions">drag cubes to fulfill orders</div>
+    </div>
+
+    <!-- Audio -->
+    <audio id="music" loop>
+        <source src="music/soft-drift.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // ============================================
+        // SOFT DRIFT - A quiet shopkeeping game
+        // ============================================
+
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const music = document.getElementById('music');
+
+        // Game state
+        const game = {
+            running: false,
+            day: 1,
+            timeOfDay: 0, // 0-1, where 0 = dawn, 0.5 = midday, 1 = dusk
+            dayDuration: 90000, // 90 seconds per day
+            dayStartTime: 0,
+            transitioning: false,
+            transitionAlpha: 0,
+
+            player: null,
+            customers: [],
+            cubes: [],
+            animals: [],
+
+            dragging: null,
+            dragOffset: { x: 0, y: 0 },
+
+            // Stall dimensions
+            stall: {
+                counterY: 320,
+                counterHeight: 20,
+                shelfY: 380,
+            }
+        };
+
+        // Color palette for cubes
+        const cubeColors = [
+            '#e07850', // warm red-orange
+            '#50a078', // sage green
+            '#5080b0', // soft blue
+            '#d0a050', // golden yellow
+            '#a070a0', // muted purple
+            '#70b0b0', // teal
+        ];
+
+        // Sky colors for time of day
+        const skyColors = {
+            dawn: { top: '#4a3a50', bottom: '#d4a080' },
+            morning: { top: '#6090c0', bottom: '#d0e0f0' },
+            midday: { top: '#70a0d0', bottom: '#e8f0f8' },
+            afternoon: { top: '#80a0c0', bottom: '#f0e8d8' },
+            dusk: { top: '#6050608', bottom: '#e0a070' },
+            evening: { top: '#302838', bottom: '#805040' },
+            night: { top: '#1a1820', bottom: '#2a2830' }
+        };
+
+        // Character sprites (8-bit style, defined as pixel patterns)
+        const characterSprites = {
+            // Different skin tones and features
+            bodies: [
+                { skin: '#e8c4a0', hair: '#4a3020', shirt: '#607090' },
+                { skin: '#c49070', hair: '#2a2020', shirt: '#906050' },
+                { skin: '#8b6040', hair: '#1a1010', shirt: '#509060' },
+                { skin: '#d4a878', hair: '#705030', shirt: '#805080' },
+                { skin: '#f0d0b0', hair: '#c08040', shirt: '#508090' },
+                { skin: '#a07050', hair: '#201510', shirt: '#909050' },
+            ]
+        };
+
+        // Animal types
+        const animalTypes = [
+            { name: 'bird', color: '#908070', size: 8 },
+            { name: 'cat', color: '#a09080', size: 12 },
+            { name: 'butterfly', color: '#c090a0', size: 6 },
+        ];
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+
+        function initGame() {
+            music.volume = 0.4;
+            music.play().catch(err => console.log('Audio error:', err));
+
+            document.getElementById('audio-init').classList.add('hidden');
+
+            // Create player (random appearance)
+            game.player = createCharacter(true);
+
+            // Create initial cubes on the shelf
+            createShelfCubes();
+
+            // Spawn first customer after a moment
+            setTimeout(spawnCustomer, 2000);
+
+            // Spawn ambient animals
+            spawnAnimals();
+
+            // Start game
+            game.running = true;
+            game.dayStartTime = Date.now();
+            requestAnimationFrame(gameLoop);
+
+            // Set up input
+            setupInput();
+        }
+
+        function createCharacter(isPlayer = false) {
+            const appearance = characterSprites.bodies[Math.floor(Math.random() * characterSprites.bodies.length)];
+            return {
+                x: isPlayer ? canvas.width / 2 : canvas.width + 50,
+                y: isPlayer ? game.stall.counterY - 40 : game.stall.counterY + 60,
+                width: 24,
+                height: 32,
+                ...appearance,
+                isPlayer: isPlayer,
+                targetX: null,
+                order: null,
+                orderFulfilled: false,
+                waitTime: 0,
+                leaving: false,
+                satisfied: false
+            };
+        }
+
+        function createShelfCubes() {
+            game.cubes = [];
+            const startX = 150;
+            const spacing = 50;
+
+            for (let i = 0; i < 8; i++) {
+                game.cubes.push({
+                    x: startX + (i % 4) * spacing + Math.random() * 10,
+                    y: game.stall.shelfY + Math.floor(i / 4) * 35 + 10,
+                    size: 28,
+                    color: cubeColors[Math.floor(Math.random() * cubeColors.length)],
+                    originalX: 0,
+                    originalY: 0,
+                    onShelf: true
+                });
+                game.cubes[i].originalX = game.cubes[i].x;
+                game.cubes[i].originalY = game.cubes[i].y;
+            }
+        }
+
+        function spawnCustomer() {
+            if (!game.running || game.transitioning) return;
+            if (game.customers.length >= 3) {
+                setTimeout(spawnCustomer, 3000);
+                return;
+            }
+
+            const customer = createCharacter(false);
+
+            // Create order (1-3 cubes)
+            const orderSize = Math.floor(Math.random() * 2) + 1;
+            customer.order = [];
+            for (let i = 0; i < orderSize; i++) {
+                customer.order.push(cubeColors[Math.floor(Math.random() * cubeColors.length)]);
+            }
+
+            // Position in line
+            const positions = [200, 300, 400];
+            const takenPositions = game.customers.map(c => c.targetX);
+            const availablePositions = positions.filter(p => !takenPositions.includes(p));
+
+            if (availablePositions.length > 0) {
+                customer.targetX = availablePositions[0];
+                game.customers.push(customer);
+            }
+
+            // Spawn next customer
+            const nextSpawn = 5000 + Math.random() * 8000;
+            setTimeout(spawnCustomer, nextSpawn);
+        }
+
+        function spawnAnimals() {
+            // Spawn a few ambient animals
+            for (let i = 0; i < 3; i++) {
+                const type = animalTypes[Math.floor(Math.random() * animalTypes.length)];
+                game.animals.push({
+                    type: type.name,
+                    x: Math.random() * canvas.width,
+                    y: 50 + Math.random() * 100,
+                    size: type.size,
+                    color: type.color,
+                    vx: (Math.random() - 0.5) * 0.3,
+                    vy: (Math.random() - 0.5) * 0.2,
+                    phase: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        // ============================================
+        // INPUT HANDLING
+        // ============================================
+
+        function setupInput() {
+            canvas.addEventListener('mousedown', startDrag);
+            canvas.addEventListener('mousemove', doDrag);
+            canvas.addEventListener('mouseup', endDrag);
+            canvas.addEventListener('mouseleave', endDrag);
+
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                startDrag({
+                    clientX: touch.clientX,
+                    clientY: touch.clientY,
+                    rect, scaleX, scaleY
+                });
+            });
+
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                doDrag({
+                    clientX: touch.clientX,
+                    clientY: touch.clientY,
+                    rect, scaleX, scaleY
+                });
+            });
+
+            canvas.addEventListener('touchend', endDrag);
+        }
+
+        function getCanvasPos(e) {
+            const rect = e.rect || canvas.getBoundingClientRect();
+            const scaleX = e.scaleX || canvas.width / rect.width;
+            const scaleY = e.scaleY || canvas.height / rect.height;
+            return {
+                x: (e.clientX - rect.left) * scaleX,
+                y: (e.clientY - rect.top) * scaleY
+            };
+        }
+
+        function startDrag(e) {
+            const pos = getCanvasPos(e);
+
+            // Check if clicking on a cube
+            for (let i = game.cubes.length - 1; i >= 0; i--) {
+                const cube = game.cubes[i];
+                if (pos.x >= cube.x && pos.x <= cube.x + cube.size &&
+                    pos.y >= cube.y && pos.y <= cube.y + cube.size) {
+                    game.dragging = cube;
+                    game.dragOffset = {
+                        x: pos.x - cube.x,
+                        y: pos.y - cube.y
+                    };
+                    cube.onShelf = false;
+                    break;
+                }
+            }
+        }
+
+        function doDrag(e) {
+            if (!game.dragging) return;
+            const pos = getCanvasPos(e);
+            game.dragging.x = pos.x - game.dragOffset.x;
+            game.dragging.y = pos.y - game.dragOffset.y;
+        }
+
+        function endDrag() {
+            if (!game.dragging) return;
+
+            const cube = game.dragging;
+            let delivered = false;
+
+            // Check if dropped on a customer
+            for (const customer of game.customers) {
+                if (!customer.leaving && customer.order && customer.order.length > 0) {
+                    const customerBounds = {
+                        x: customer.x - 20,
+                        y: customer.y - 40,
+                        width: 60,
+                        height: 80
+                    };
+
+                    if (cube.x + cube.size/2 > customerBounds.x &&
+                        cube.x + cube.size/2 < customerBounds.x + customerBounds.width &&
+                        cube.y + cube.size/2 > customerBounds.y &&
+                        cube.y + cube.size/2 < customerBounds.y + customerBounds.height) {
+
+                        // Check if color matches order
+                        const orderIndex = customer.order.indexOf(cube.color);
+                        if (orderIndex !== -1) {
+                            // Correct item!
+                            customer.order.splice(orderIndex, 1);
+                            delivered = true;
+
+                            // Remove cube
+                            const cubeIndex = game.cubes.indexOf(cube);
+                            if (cubeIndex !== -1) {
+                                game.cubes.splice(cubeIndex, 1);
+                            }
+
+                            // Check if order complete
+                            if (customer.order.length === 0) {
+                                customer.satisfied = true;
+                                customer.leaving = true;
+                            }
+
+                            // Replenish shelf
+                            setTimeout(replenishCube, 1000);
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // If not delivered, return to shelf
+            if (!delivered) {
+                cube.x = cube.originalX;
+                cube.y = cube.originalY;
+                cube.onShelf = true;
+            }
+
+            game.dragging = null;
+        }
+
+        function replenishCube() {
+            const startX = 150;
+            const spacing = 50;
+            const index = game.cubes.length;
+
+            if (index < 8) {
+                const cube = {
+                    x: startX + (index % 4) * spacing + Math.random() * 10,
+                    y: game.stall.shelfY + Math.floor(index / 4) * 35 + 10,
+                    size: 28,
+                    color: cubeColors[Math.floor(Math.random() * cubeColors.length)],
+                    originalX: 0,
+                    originalY: 0,
+                    onShelf: true
+                };
+                cube.originalX = cube.x;
+                cube.originalY = cube.y;
+                game.cubes.push(cube);
+            }
+        }
+
+        // ============================================
+        // GAME LOOP
+        // ============================================
+
+        function gameLoop(timestamp) {
+            if (!game.running) return;
+
+            update();
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update() {
+            // Update time of day
+            const elapsed = Date.now() - game.dayStartTime;
+            game.timeOfDay = Math.min(1, elapsed / game.dayDuration);
+
+            // Check for day end
+            if (game.timeOfDay >= 1 && !game.transitioning) {
+                startNightTransition();
+            }
+
+            // Update customers
+            for (let i = game.customers.length - 1; i >= 0; i--) {
+                const customer = game.customers[i];
+
+                if (customer.leaving) {
+                    // Walk away
+                    customer.x += 1.5;
+                    if (customer.x > canvas.width + 50) {
+                        game.customers.splice(i, 1);
+                    }
+                } else if (customer.targetX !== null) {
+                    // Walk to position
+                    if (customer.x > customer.targetX + 2) {
+                        customer.x -= 1;
+                    } else if (customer.x < customer.targetX - 2) {
+                        customer.x += 1;
+                    }
+
+                    // Wait timer
+                    customer.waitTime += 16;
+                    if (customer.waitTime > 20000) {
+                        // Give up and leave
+                        customer.leaving = true;
+                    }
+                }
+            }
+
+            // Update animals
+            for (const animal of game.animals) {
+                animal.phase += 0.05;
+
+                if (animal.type === 'bird') {
+                    animal.x += animal.vx;
+                    animal.y += Math.sin(animal.phase) * 0.3;
+                    if (animal.x < -20) animal.x = canvas.width + 20;
+                    if (animal.x > canvas.width + 20) animal.x = -20;
+                } else if (animal.type === 'butterfly') {
+                    animal.x += Math.sin(animal.phase * 1.5) * 0.5;
+                    animal.y += Math.cos(animal.phase) * 0.3;
+                    animal.x += animal.vx;
+                    if (animal.x < 0 || animal.x > canvas.width) animal.vx *= -1;
+                    if (animal.y < 30 || animal.y > 150) animal.vy *= -1;
+                } else if (animal.type === 'cat') {
+                    // Cat just sits and occasionally moves
+                    if (Math.random() < 0.002) {
+                        animal.vx = (Math.random() - 0.5) * 0.5;
+                    }
+                    animal.x += animal.vx;
+                    animal.vx *= 0.98;
+                    animal.x = Math.max(20, Math.min(canvas.width - 20, animal.x));
+                    animal.y = game.stall.counterY + 80; // On the ground
+                }
+            }
+
+            // Update transition
+            if (game.transitioning) {
+                game.transitionAlpha += 0.01;
+                if (game.transitionAlpha >= 1) {
+                    // New day
+                    game.day++;
+                    document.getElementById('day-indicator').textContent = `day ${game.day}`;
+                    game.timeOfDay = 0;
+                    game.dayStartTime = Date.now();
+                    game.customers = [];
+                    createShelfCubes();
+
+                    // Fade back in
+                    setTimeout(() => {
+                        const fadeIn = setInterval(() => {
+                            game.transitionAlpha -= 0.02;
+                            if (game.transitionAlpha <= 0) {
+                                game.transitionAlpha = 0;
+                                game.transitioning = false;
+                                clearInterval(fadeIn);
+                                setTimeout(spawnCustomer, 2000);
+                            }
+                        }, 30);
+                    }, 1500);
+                }
+            }
+        }
+
+        function startNightTransition() {
+            game.transitioning = true;
+            game.transitionAlpha = 0;
+
+            // Clear remaining customers
+            for (const customer of game.customers) {
+                customer.leaving = true;
+            }
+        }
+
+        // ============================================
+        // RENDERING
+        // ============================================
+
+        function render() {
+            // Clear
+            ctx.fillStyle = '#1a1612';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw sky gradient based on time of day
+            drawSky();
+
+            // Draw distant background
+            drawBackground();
+
+            // Draw animals (behind stall)
+            drawAnimals();
+
+            // Draw customers
+            for (const customer of game.customers) {
+                drawCharacter(customer);
+                if (customer.order && customer.order.length > 0 && !customer.leaving) {
+                    drawOrderBubble(customer);
+                }
+            }
+
+            // Draw stall
+            drawStall();
+
+            // Draw player
+            drawCharacter(game.player);
+
+            // Draw cubes
+            for (const cube of game.cubes) {
+                if (cube !== game.dragging) {
+                    drawCube(cube);
+                }
+            }
+            // Draw dragged cube on top
+            if (game.dragging) {
+                drawCube(game.dragging);
+            }
+
+            // Draw transition overlay
+            if (game.transitioning || game.transitionAlpha > 0) {
+                ctx.fillStyle = `rgba(26, 22, 18, ${game.transitionAlpha})`;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        function drawSky() {
+            const t = game.timeOfDay;
+            let colors;
+
+            if (t < 0.15) {
+                colors = lerpColors(skyColors.dawn, skyColors.morning, t / 0.15);
+            } else if (t < 0.4) {
+                colors = lerpColors(skyColors.morning, skyColors.midday, (t - 0.15) / 0.25);
+            } else if (t < 0.6) {
+                colors = lerpColors(skyColors.midday, skyColors.afternoon, (t - 0.4) / 0.2);
+            } else if (t < 0.8) {
+                colors = lerpColors(skyColors.afternoon, skyColors.dusk, (t - 0.6) / 0.2);
+            } else if (t < 0.9) {
+                colors = lerpColors(skyColors.dusk, skyColors.evening, (t - 0.8) / 0.1);
+            } else {
+                colors = lerpColors(skyColors.evening, skyColors.night, (t - 0.9) / 0.1);
+            }
+
+            const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+            gradient.addColorStop(0, colors.top);
+            gradient.addColorStop(1, colors.bottom);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, 200);
+        }
+
+        function lerpColors(c1, c2, t) {
+            return {
+                top: lerpColor(c1.top, c2.top, t),
+                bottom: lerpColor(c1.bottom, c2.bottom, t)
+            };
+        }
+
+        function lerpColor(color1, color2, t) {
+            const r1 = parseInt(color1.slice(1, 3), 16);
+            const g1 = parseInt(color1.slice(3, 5), 16);
+            const b1 = parseInt(color1.slice(5, 7), 16);
+            const r2 = parseInt(color2.slice(1, 3), 16);
+            const g2 = parseInt(color2.slice(3, 5), 16);
+            const b2 = parseInt(color2.slice(5, 7), 16);
+            const r = Math.round(r1 + (r2 - r1) * t);
+            const g = Math.round(g1 + (g2 - g1) * t);
+            const b = Math.round(b1 + (b2 - b1) * t);
+            return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+        }
+
+        function drawBackground() {
+            // Distant hills
+            ctx.fillStyle = '#5a6858';
+            ctx.beginPath();
+            ctx.moveTo(0, 180);
+            ctx.quadraticCurveTo(150, 140, 300, 170);
+            ctx.quadraticCurveTo(450, 130, 600, 160);
+            ctx.lineTo(600, 200);
+            ctx.lineTo(0, 200);
+            ctx.fill();
+
+            // Ground
+            ctx.fillStyle = '#4a5848';
+            ctx.fillRect(0, 200, canvas.width, 300);
+
+            // Path/dirt area in front of stall
+            ctx.fillStyle = '#6a6050';
+            ctx.fillRect(100, 350, 400, 150);
+        }
+
+        function drawStall() {
+            // Back wall
+            ctx.fillStyle = '#5a4a3a';
+            ctx.fillRect(120, 240, 360, 100);
+
+            // Wood grain details
+            ctx.strokeStyle = '#4a3a2a';
+            ctx.lineWidth = 1;
+            for (let y = 250; y < 340; y += 15) {
+                ctx.beginPath();
+                ctx.moveTo(120, y);
+                ctx.lineTo(480, y);
+                ctx.stroke();
+            }
+
+            // Counter top
+            ctx.fillStyle = '#7a6a5a';
+            ctx.fillRect(100, game.stall.counterY, 400, game.stall.counterHeight);
+
+            // Counter front
+            ctx.fillStyle = '#6a5a4a';
+            ctx.fillRect(100, game.stall.counterY + game.stall.counterHeight, 400, 30);
+
+            // Shelf
+            ctx.fillStyle = '#5a4a3a';
+            ctx.fillRect(140, game.stall.shelfY - 5, 320, 8);
+
+            // Awning
+            const awningColors = ['#c07050', '#d08060'];
+            for (let i = 0; i < 8; i++) {
+                ctx.fillStyle = awningColors[i % 2];
+                ctx.beginPath();
+                ctx.moveTo(100 + i * 50, 220);
+                ctx.lineTo(150 + i * 50, 220);
+                ctx.lineTo(140 + i * 50, 240);
+                ctx.lineTo(110 + i * 50, 240);
+                ctx.fill();
+            }
+        }
+
+        function drawCharacter(char) {
+            const x = Math.floor(char.x);
+            const y = Math.floor(char.y);
+            const w = char.width;
+            const h = char.height;
+
+            // Simple 8-bit style character
+            // Head
+            ctx.fillStyle = char.skin;
+            ctx.fillRect(x - w/2 + 4, y - h + 4, w - 8, 12);
+
+            // Hair
+            ctx.fillStyle = char.hair;
+            ctx.fillRect(x - w/2 + 4, y - h + 2, w - 8, 6);
+
+            // Eyes
+            ctx.fillStyle = '#202020';
+            ctx.fillRect(x - w/2 + 8, y - h + 10, 3, 3);
+            ctx.fillRect(x + w/2 - 11, y - h + 10, 3, 3);
+
+            // Body
+            ctx.fillStyle = char.shirt;
+            ctx.fillRect(x - w/2 + 2, y - h + 16, w - 4, 16);
+
+            // Arms
+            ctx.fillStyle = char.skin;
+            ctx.fillRect(x - w/2 - 2, y - h + 18, 4, 10);
+            ctx.fillRect(x + w/2 - 2, y - h + 18, 4, 10);
+        }
+
+        function drawOrderBubble(customer) {
+            const bubbleX = customer.x;
+            const bubbleY = customer.y - 60;
+            const padding = 8;
+            const cubeSize = 16;
+            const spacing = 4;
+            const totalWidth = customer.order.length * (cubeSize + spacing) - spacing + padding * 2;
+
+            // Bubble background
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.beginPath();
+            ctx.roundRect(bubbleX - totalWidth/2, bubbleY - 15, totalWidth, 30, 4);
+            ctx.fill();
+
+            // Bubble tail
+            ctx.beginPath();
+            ctx.moveTo(bubbleX - 5, bubbleY + 15);
+            ctx.lineTo(bubbleX + 5, bubbleY + 15);
+            ctx.lineTo(bubbleX, bubbleY + 22);
+            ctx.fill();
+
+            // Draw ordered cubes
+            let offsetX = bubbleX - totalWidth/2 + padding;
+            for (const color of customer.order) {
+                ctx.fillStyle = color;
+                ctx.fillRect(offsetX, bubbleY - 8, cubeSize, cubeSize);
+
+                // Highlight
+                ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                ctx.fillRect(offsetX, bubbleY - 8, cubeSize, 4);
+
+                offsetX += cubeSize + spacing;
+            }
+        }
+
+        function drawCube(cube) {
+            const x = Math.floor(cube.x);
+            const y = Math.floor(cube.y);
+            const s = cube.size;
+
+            // Main face
+            ctx.fillStyle = cube.color;
+            ctx.fillRect(x, y, s, s);
+
+            // Highlight (top and left)
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.fillRect(x, y, s, 4);
+            ctx.fillRect(x, y, 4, s);
+
+            // Shadow (bottom and right)
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.fillRect(x, y + s - 4, s, 4);
+            ctx.fillRect(x + s - 4, y, 4, s);
+        }
+
+        function drawAnimals() {
+            for (const animal of game.animals) {
+                ctx.fillStyle = animal.color;
+
+                if (animal.type === 'bird') {
+                    // Simple bird shape
+                    const wingOffset = Math.sin(animal.phase * 3) * 3;
+                    ctx.beginPath();
+                    ctx.ellipse(animal.x, animal.y, 6, 4, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Wings
+                    ctx.beginPath();
+                    ctx.moveTo(animal.x - 4, animal.y);
+                    ctx.lineTo(animal.x - 8, animal.y - 4 + wingOffset);
+                    ctx.lineTo(animal.x - 2, animal.y);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.moveTo(animal.x + 4, animal.y);
+                    ctx.lineTo(animal.x + 8, animal.y - 4 + wingOffset);
+                    ctx.lineTo(animal.x + 2, animal.y);
+                    ctx.fill();
+                } else if (animal.type === 'butterfly') {
+                    const wingOpen = Math.abs(Math.sin(animal.phase * 4)) * 4;
+                    ctx.beginPath();
+                    ctx.ellipse(animal.x - wingOpen, animal.y, 4, 3, 0, 0, Math.PI * 2);
+                    ctx.ellipse(animal.x + wingOpen, animal.y, 4, 3, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#403030';
+                    ctx.fillRect(animal.x - 1, animal.y - 3, 2, 6);
+                } else if (animal.type === 'cat') {
+                    // Simple sitting cat
+                    ctx.beginPath();
+                    ctx.ellipse(animal.x, animal.y, 8, 6, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Head
+                    ctx.beginPath();
+                    ctx.arc(animal.x, animal.y - 8, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Ears
+                    ctx.beginPath();
+                    ctx.moveTo(animal.x - 5, animal.y - 10);
+                    ctx.lineTo(animal.x - 3, animal.y - 15);
+                    ctx.lineTo(animal.x - 1, animal.y - 10);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.moveTo(animal.x + 5, animal.y - 10);
+                    ctx.lineTo(animal.x + 3, animal.y - 15);
+                    ctx.lineTo(animal.x + 1, animal.y - 10);
+                    ctx.fill();
+                    // Eyes (blink occasionally)
+                    if (Math.sin(animal.phase * 0.5) > 0.95) {
+                        ctx.fillStyle = '#303030';
+                        ctx.fillRect(animal.x - 3, animal.y - 9, 2, 1);
+                        ctx.fillRect(animal.x + 1, animal.y - 9, 2, 1);
+                    } else {
+                        ctx.fillStyle = '#303030';
+                        ctx.fillRect(animal.x - 3, animal.y - 10, 2, 2);
+                        ctx.fillRect(animal.x + 1, animal.y - 10, 2, 2);
+                    }
+                }
+            }
+        }
+
+        // Keyboard support for init
+        document.addEventListener('keydown', (e) => {
+            const audioInitActive = !document.getElementById('audio-init').classList.contains('hidden');
+
+            if (audioInitActive && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                initGame();
+            }
+        });
+    </script>
+</body>
+</html>
