@@ -322,21 +322,31 @@
 
         function createShelfCubes() {
             game.cubes = [];
-            const startX = 150;
-            const spacing = 50;
+
+            // Define fixed shelf positions
+            game.shelfPositions = [
+                { x: 150, y: game.stall.shelfY + 10 },
+                { x: 200, y: game.stall.shelfY + 10 },
+                { x: 250, y: game.stall.shelfY + 10 },
+                { x: 300, y: game.stall.shelfY + 10 },
+                { x: 175, y: game.stall.shelfY + 45 },
+                { x: 225, y: game.stall.shelfY + 45 },
+                { x: 275, y: game.stall.shelfY + 45 },
+                { x: 325, y: game.stall.shelfY + 45 },
+            ];
 
             for (let i = 0; i < 8; i++) {
+                const pos = game.shelfPositions[i];
                 game.cubes.push({
-                    x: startX + (i % 4) * spacing + Math.random() * 10,
-                    y: game.stall.shelfY + Math.floor(i / 4) * 35 + 10,
+                    x: pos.x + Math.random() * 6 - 3,
+                    y: pos.y,
                     size: 28,
                     color: cubeColors[Math.floor(Math.random() * cubeColors.length)],
-                    originalX: 0,
-                    originalY: 0,
-                    onShelf: true
+                    originalX: pos.x,
+                    originalY: pos.y,
+                    onShelf: true,
+                    slotIndex: i
                 });
-                game.cubes[i].originalX = game.cubes[i].x;
-                game.cubes[i].originalY = game.cubes[i].y;
             }
         }
 
@@ -347,13 +357,23 @@
                 return;
             }
 
+            // Get colors currently available on shelf
+            const availableColors = getAvailableColors();
+            if (availableColors.length === 0) {
+                // No cubes available, try again later
+                setTimeout(spawnCustomer, 2000);
+                return;
+            }
+
             const customer = createCharacter(false);
 
-            // Create order (1-3 cubes)
+            // Create order (1-2 cubes) using only available colors
             const orderSize = Math.floor(Math.random() * 2) + 1;
             customer.order = [];
             for (let i = 0; i < orderSize; i++) {
-                customer.order.push(cubeColors[Math.floor(Math.random() * cubeColors.length)]);
+                // Pick from available colors
+                const color = availableColors[Math.floor(Math.random() * availableColors.length)];
+                customer.order.push(color);
             }
 
             // Position in line
@@ -522,24 +542,45 @@
         }
 
         function replenishCube() {
-            const startX = 150;
-            const spacing = 50;
-            const index = game.cubes.length;
+            if (game.cubes.length >= 8) return;
 
-            if (index < 8) {
-                const cube = {
-                    x: startX + (index % 4) * spacing + Math.random() * 10,
-                    y: game.stall.shelfY + Math.floor(index / 4) * 35 + 10,
-                    size: 28,
-                    color: cubeColors[Math.floor(Math.random() * cubeColors.length)],
-                    originalX: 0,
-                    originalY: 0,
-                    onShelf: true
-                };
-                cube.originalX = cube.x;
-                cube.originalY = cube.y;
-                game.cubes.push(cube);
+            // Find which slot indices are currently occupied
+            const occupiedSlots = new Set(game.cubes.map(c => c.slotIndex));
+
+            // Find first empty slot
+            let emptySlotIndex = -1;
+            for (let i = 0; i < 8; i++) {
+                if (!occupiedSlots.has(i)) {
+                    emptySlotIndex = i;
+                    break;
+                }
             }
+
+            if (emptySlotIndex === -1) return;
+
+            const pos = game.shelfPositions[emptySlotIndex];
+            const cube = {
+                x: pos.x + Math.random() * 6 - 3,
+                y: pos.y,
+                size: 28,
+                color: cubeColors[Math.floor(Math.random() * cubeColors.length)],
+                originalX: pos.x,
+                originalY: pos.y,
+                onShelf: true,
+                slotIndex: emptySlotIndex
+            };
+            game.cubes.push(cube);
+        }
+
+        function getAvailableColors() {
+            // Get colors currently on shelf
+            const available = new Set();
+            for (const cube of game.cubes) {
+                if (cube.onShelf) {
+                    available.add(cube.color);
+                }
+            }
+            return Array.from(available);
         }
 
         // ============================================
