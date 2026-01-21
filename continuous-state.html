@@ -1024,18 +1024,35 @@
                 }
             });
 
-            // Coherence increases with stillness, decreases with chaos
-            // Dampened penalties for a more "tending" feel rather than "panicking"
-            const targetCoherence =
-                100 -
-                (movingTiles * 3) -
-                (totalStress * 0.3) +
-                (settledTiles * 1.5);
+            // Coherence based on ratio of settled vs moving tiles
+            // This makes all three states actually reachable
+            const totalTiles = state.tiles.length;
+            const settledRatio = settledTiles / totalTiles;
+            const movingRatio = movingTiles / totalTiles;
+            const avgStress = totalStress / totalTiles;
 
-            // Natural recovery drift - coherence slowly returns if nothing moves
-            const recoveryRate = movingTiles === 0 ? 0.03 : 0.015;
+            // Target coherence based on how much of the system is at rest
+            // settledRatio of 0.8+ = stillness, 0.4-0.8 = settling, <0.4 = turbulence
+            let targetCoherence;
 
-            // Smooth transition with recovery
+            if (movingTiles <= 2 && avgStress < 1) {
+                // Almost everything still and unstressed = high coherence
+                targetCoherence = 80 + (settledRatio * 20);
+            } else if (movingRatio < 0.15) {
+                // Few things moving = settling toward stillness
+                targetCoherence = 50 + (settledRatio * 30) - (avgStress * 2);
+            } else if (movingRatio < 0.35) {
+                // Moderate movement = settling state
+                targetCoherence = 35 + (settledRatio * 25) - (avgStress * 1.5);
+            } else {
+                // Lots of movement = turbulence
+                targetCoherence = 20 - (movingRatio * 20) - (avgStress);
+            }
+
+            // Natural recovery when nothing is moving
+            const recoveryRate = movingTiles === 0 ? 0.04 : 0.02;
+
+            // Smooth transition
             state.coherence += (Math.max(0, Math.min(100, targetCoherence)) - state.coherence) * recoveryRate;
         }
 
@@ -1064,29 +1081,68 @@
             }
         }
 
-        // Rest function - graceful ending
+        // Rest state - peaceful listening mode
+        let restMode = false;
+        let currentRestTrack = 'coherent'; // which track is currently playing in rest mode
+
         function rest() {
+            if (restMode) return; // Already in rest mode
+
+            restMode = true;
+            state.running = false; // Stop physics
+
             const overlay = document.getElementById('fade-overlay');
             overlay.classList.add('active');
 
-            // Let the simulation continue for a few more seconds during fade
-            // so the player hears the final settling sounds
-            const restDelay = 5000; // 5 seconds of settling sounds
+            // Fade both tracks to half volume, then play sequentially
+            const targetVolume = 0.25;
 
-            // Start fading audio after the settling period
-            setTimeout(() => {
-                const fadeAudio = setInterval(() => {
-                    if (audioCoherent.volume > 0.05) {
-                        audioCoherent.volume -= 0.02;
-                        audioChaotic.volume = Math.max(0, audioChaotic.volume - 0.02);
-                    } else {
-                        clearInterval(fadeAudio);
-                        audioCoherent.pause();
-                        audioChaotic.pause();
-                        state.running = false;
-                    }
-                }, 100);
-            }, restDelay);
+            const fadeToRest = setInterval(() => {
+                let done = true;
+
+                if (audioCoherent.volume > targetVolume + 0.02) {
+                    audioCoherent.volume -= 0.02;
+                    done = false;
+                } else {
+                    audioCoherent.volume = targetVolume;
+                }
+
+                if (audioChaotic.volume > 0.02) {
+                    audioChaotic.volume -= 0.02;
+                    done = false;
+                } else {
+                    audioChaotic.volume = 0;
+                    audioChaotic.pause();
+                }
+
+                if (done) {
+                    clearInterval(fadeToRest);
+                    // Start sequential playback - coherent track plays first
+                    setupRestPlayback();
+                }
+            }, 100);
+        }
+
+        function setupRestPlayback() {
+            // When coherent track ends, play chaotic track
+            audioCoherent.loop = false;
+            audioChaotic.loop = false;
+
+            audioCoherent.onended = () => {
+                if (!restMode) return;
+                currentRestTrack = 'chaotic';
+                audioChaotic.volume = 0.25;
+                audioChaotic.currentTime = 0;
+                audioChaotic.play();
+            };
+
+            audioChaotic.onended = () => {
+                if (!restMode) return;
+                currentRestTrack = 'coherent';
+                audioCoherent.volume = 0.25;
+                audioCoherent.currentTime = 0;
+                audioCoherent.play();
+            };
         }
 
         // Keyboard support for init
