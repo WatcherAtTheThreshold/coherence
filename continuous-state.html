@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CONTINUOUS STATE</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Cormorant+Garamond:wght@400;600&display=swap');
+
+        :root {
+            --earth-deep: #1a1612;
+            --earth-warm: #2d2620;
+            --stone-dark: #3d3832;
+            --stone-mid: #5c554d;
+            --stone-light: #8a8279;
+            --sand: #c4b8a5;
+            --clay: #9c7c5c;
+            --moss: #5c6b4a;
+            --moss-light: #7a8c66;
+            --water: #5c7a8c;
+            --stress-warm: #8c5c4a;
+            --stress-hot: #a64c3c;
+            --settled: #6b6458;
+            --text-dim: #6b635a;
+            --text-bright: #d4cdc0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'IBM Plex Mono', monospace;
+            background: var(--earth-deep);
+            color: var(--text-bright);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+            padding: 1rem;
+        }
+
+        /* Subtle grain texture */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .container {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            max-width: 100%;
+        }
+
+        header {
+            margin-bottom: 1.5rem;
+            animation: fadeIn 1.5s ease-out;
+        }
+
+        h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            font-weight: 400;
+            letter-spacing: 0.4rem;
+            text-transform: uppercase;
+            color: var(--sand);
+            filter: drop-shadow(0 2px 8px rgba(196, 184, 165, 0.2));
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: clamp(0.65rem, 1.5vw, 0.8rem);
+            color: var(--text-dim);
+            letter-spacing: 0.25rem;
+            text-transform: lowercase;
+            font-style: italic;
+        }
+
+        #game-container {
+            background: var(--earth-warm);
+            border: 1px solid var(--stone-dark);
+            padding: 1.5rem;
+            border-radius: 2px;
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.5),
+                0 2px 8px rgba(0, 0, 0, 0.3),
+                inset 0 1px 2px rgba(255, 255, 255, 0.03),
+                inset 0 0 40px rgba(0, 0, 0, 0.3);
+            animation: fadeIn 1.5s ease-out 0.3s both;
+            display: inline-block;
+        }
+
+        #grid-container {
+            position: relative;
+            width: min(85vw, 500px);
+            height: min(85vw, 500px);
+            max-width: 500px;
+            max-height: 500px;
+            background: linear-gradient(180deg, var(--earth-deep) 0%, rgba(26, 22, 18, 0.95) 100%);
+            border: 1px solid var(--stone-dark);
+            border-radius: 2px;
+            box-shadow:
+                inset 0 0 30px rgba(0, 0, 0, 0.6),
+                inset 0 4px 12px rgba(0, 0, 0, 0.4);
+            overflow: hidden;
+        }
+
+        .tile {
+            position: absolute;
+            border-radius: 2px;
+            cursor: grab;
+            transition: box-shadow 0.3s ease, transform 0.1s ease;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .tile:active {
+            cursor: grabbing;
+        }
+
+        .tile.stone {
+            background: linear-gradient(135deg, var(--stone-mid) 0%, var(--stone-dark) 100%);
+            box-shadow:
+                0 2px 6px rgba(0, 0, 0, 0.4),
+                inset 0 1px 2px rgba(255, 255, 255, 0.1),
+                inset 0 -1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .tile.soil {
+            background: linear-gradient(135deg, var(--clay) 0%, var(--earth-warm) 100%);
+            box-shadow:
+                0 2px 5px rgba(0, 0, 0, 0.35),
+                inset 0 1px 2px rgba(255, 255, 255, 0.08),
+                inset 0 -1px 2px rgba(0, 0, 0, 0.25);
+        }
+
+        .tile.moss {
+            background: linear-gradient(135deg, var(--moss-light) 0%, var(--moss) 100%);
+            box-shadow:
+                0 2px 5px rgba(0, 0, 0, 0.35),
+                inset 0 1px 2px rgba(255, 255, 255, 0.1),
+                inset 0 -1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .tile.water {
+            background: linear-gradient(135deg, var(--water) 0%, rgba(92, 122, 140, 0.8) 100%);
+            box-shadow:
+                0 2px 6px rgba(0, 0, 0, 0.3),
+                inset 0 2px 4px rgba(255, 255, 255, 0.15),
+                inset 0 -1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Stress states */
+        .tile.strained {
+            animation: strain 0.5s ease-in-out infinite;
+        }
+
+        .tile.stressed {
+            animation: stress 0.3s ease-in-out infinite;
+            box-shadow:
+                0 2px 6px rgba(0, 0, 0, 0.4),
+                0 0 8px rgba(166, 76, 60, 0.3),
+                inset 0 1px 2px rgba(255, 255, 255, 0.1),
+                inset 0 -1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .tile.cracked::after {
+            content: '';
+            position: absolute;
+            top: 20%;
+            left: 30%;
+            width: 40%;
+            height: 60%;
+            background: linear-gradient(45deg, transparent 40%, rgba(0,0,0,0.3) 45%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .tile.settled {
+            filter: saturate(0.8) brightness(0.95);
+            transition: filter 2s ease;
+        }
+
+        .tile.falling {
+            transition: top 0.15s ease-in, left 0.15s ease-out;
+        }
+
+        .tile.sliding {
+            transition: left 0.2s ease-out, top 0.2s ease-out;
+        }
+
+        .tile.dragging {
+            z-index: 100;
+            box-shadow:
+                0 8px 20px rgba(0, 0, 0, 0.5),
+                0 4px 10px rgba(0, 0, 0, 0.3),
+                inset 0 1px 2px rgba(255, 255, 255, 0.15);
+            transform: scale(1.05);
+            cursor: grabbing;
+        }
+
+        @keyframes strain {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-0.5px); }
+            75% { transform: translateX(0.5px); }
+        }
+
+        @keyframes stress {
+            0%, 100% { transform: translate(0, 0); }
+            20% { transform: translate(-1px, 0.5px); }
+            40% { transform: translate(1px, -0.5px); }
+            60% { transform: translate(-0.5px, 1px); }
+            80% { transform: translate(0.5px, -1px); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Coherence indicator - subtle, ambient */
+        #coherence-field {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 2s ease;
+            background: radial-gradient(circle at center, transparent 40%, rgba(166, 76, 60, 0.1) 100%);
+        }
+
+        #coherence-field.low {
+            opacity: 1;
+        }
+
+        /* Bottom status - minimal */
+        #status {
+            margin-top: 1.5rem;
+            font-size: clamp(0.7rem, 1.5vw, 0.85rem);
+            letter-spacing: 0.15rem;
+            padding: 0.75rem 1.25rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--stone-dark);
+            border-radius: 2px;
+            display: inline-block;
+            color: var(--text-dim);
+            box-shadow:
+                0 2px 8px rgba(0, 0, 0, 0.3),
+                inset 0 1px 2px rgba(255, 255, 255, 0.02);
+        }
+
+        #status .state-text {
+            transition: color 1s ease;
+        }
+
+        #status .state-text.coherent {
+            color: var(--moss-light);
+        }
+
+        #status .state-text.unsettled {
+            color: var(--clay);
+        }
+
+        #status .state-text.chaotic {
+            color: var(--stress-warm);
+        }
+
+        .instructions {
+            margin-top: 1rem;
+            font-size: clamp(0.6rem, 1.3vw, 0.75rem);
+            color: var(--text-dim);
+            letter-spacing: 0.1rem;
+            animation: fadeIn 1.5s ease-out 0.6s both;
+            font-style: italic;
+        }
+
+        /* Rest button */
+        #rest-btn {
+            margin-top: 1rem;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.75rem;
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: 1px solid var(--stone-dark);
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: all 0.5s ease;
+            text-transform: lowercase;
+            letter-spacing: 0.15rem;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        #rest-btn:hover {
+            border-color: var(--sand);
+            color: var(--sand);
+            box-shadow: 0 2px 12px rgba(196, 184, 165, 0.15);
+        }
+
+        /* Audio init overlay */
+        #audio-init {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--earth-deep);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            transition: opacity 1s ease;
+        }
+
+        #audio-init.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .init-content {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .init-content h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            font-weight: 400;
+            letter-spacing: 0.3rem;
+            color: var(--sand);
+            margin-bottom: 1rem;
+        }
+
+        .init-content p {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            margin-bottom: 1.5rem;
+            font-style: italic;
+        }
+
+        .init-content button {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.9rem;
+            padding: 0.75rem 2rem;
+            background: transparent;
+            border: 1px solid var(--sand);
+            color: var(--sand);
+            cursor: pointer;
+            transition: all 0.5s ease;
+            text-transform: lowercase;
+            letter-spacing: 0.2rem;
+            box-shadow:
+                0 2px 8px rgba(0, 0, 0, 0.3),
+                inset 0 1px 2px rgba(196, 184, 165, 0.1);
+        }
+
+        .init-content button:hover,
+        .init-content button:focus {
+            background: var(--sand);
+            color: var(--earth-deep);
+            box-shadow:
+                0 4px 16px rgba(196, 184, 165, 0.3),
+                inset 0 1px 2px rgba(255, 255, 255, 0.2);
+            outline: none;
+        }
+
+        /* Fade out overlay for rest */
+        #fade-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--earth-deep);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 2500;
+            transition: opacity 3s ease;
+        }
+
+        #fade-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+    </style>
+</head>
+<body>
+    <!-- Audio init overlay -->
+    <div id="audio-init">
+        <div class="init-content">
+            <h2>Continuous State</h2>
+            <p>a system to tend</p>
+            <button id="init-audio-btn" onclick="initAudio()" autofocus>begin</button>
+        </div>
+    </div>
+
+    <!-- Fade overlay for rest -->
+    <div id="fade-overlay"></div>
+
+    <div class="container">
+        <header>
+            <h1>Continuous State</h1>
+            <div class="subtitle">observe, intervene, wait</div>
+        </header>
+
+        <div id="game-container">
+            <div id="grid-container">
+                <div id="coherence-field"></div>
+                <!-- Tiles will be generated here -->
+            </div>
+        </div>
+
+        <div id="status">
+            <span class="state-text coherent">stillness</span>
+        </div>
+
+        <button id="rest-btn" onclick="rest()">rest</button>
+
+        <div class="instructions">
+            drag tiles gently to intervene
+        </div>
+    </div>
+
+    <!-- Audio elements -->
+    <audio id="music-coherent" loop>
+        <source src="music/ambient.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="music-chaotic" loop>
+        <source src="music/ambient2.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // Audio system
+        const audioCoherent = document.getElementById('music-coherent');
+        const audioChaotic = document.getElementById('music-chaotic');
+        let audioContext = null;
+        let audioInitialized = false;
+
+        // Target volumes for crossfade
+        let coherentVolume = 0.5;
+        let chaoticVolume = 0;
+
+        function initAudio() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+            audioCoherent.volume = 0.5;
+            audioChaotic.volume = 0;
+
+            // Start both tracks
+            audioCoherent.play().catch(err => console.log('Audio error:', err));
+            audioChaotic.play().catch(err => console.log('Audio error:', err));
+
+            audioInitialized = true;
+
+            // Fade out init screen
+            document.getElementById('audio-init').classList.add('hidden');
+
+            // Start the simulation
+            setTimeout(initGame, 500);
+        }
+
+        // Crossfade music based on coherence
+        function updateMusic(coherence) {
+            if (!audioInitialized) return;
+
+            // Map coherence (0-100) to volumes
+            // High coherence = more ambient, less chaotic
+            const normalizedCoherence = coherence / 100;
+
+            coherentVolume = 0.1 + (normalizedCoherence * 0.4);
+            chaoticVolume = 0.4 - (normalizedCoherence * 0.35);
+
+            // Smooth crossfade
+            const fadeStep = () => {
+                const diff1 = coherentVolume - audioCoherent.volume;
+                const diff2 = chaoticVolume - audioChaotic.volume;
+
+                if (Math.abs(diff1) > 0.01) {
+                    audioCoherent.volume += diff1 * 0.05;
+                }
+                if (Math.abs(diff2) > 0.01) {
+                    audioChaotic.volume += diff2 * 0.05;
+                }
+            };
+
+            fadeStep();
+        }
+
+        // Procedural sounds
+        function playSound(type) {
+            if (!audioContext) return;
+
+            const now = audioContext.currentTime;
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            switch(type) {
+                case 'place':
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(150, now);
+                    oscillator.frequency.exponentialRampToValueAtTime(80, now + 0.1);
+                    gainNode.gain.setValueAtTime(0.08, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.1);
+                    break;
+
+                case 'slide':
+                    oscillator.type = 'triangle';
+                    oscillator.frequency.setValueAtTime(100, now);
+                    oscillator.frequency.exponentialRampToValueAtTime(60, now + 0.15);
+                    gainNode.gain.setValueAtTime(0.05, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.15);
+                    break;
+
+                case 'crack':
+                    oscillator.type = 'sawtooth';
+                    oscillator.frequency.setValueAtTime(200, now);
+                    oscillator.frequency.exponentialRampToValueAtTime(50, now + 0.08);
+                    gainNode.gain.setValueAtTime(0.1, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.08);
+                    break;
+
+                case 'settle':
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(200, now);
+                    oscillator.frequency.setValueAtTime(250, now + 0.05);
+                    oscillator.frequency.setValueAtTime(200, now + 0.1);
+                    gainNode.gain.setValueAtTime(0.06, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.2);
+                    break;
+            }
+        }
+
+        // Game state
+        const state = {
+            tiles: [],
+            coherence: 75,
+            dragging: null,
+            dragOffset: { x: 0, y: 0 },
+            gridWidth: 500,
+            gridHeight: 500,
+            tileSize: 40,
+            gravity: 0.5,
+            running: true,
+            lastUpdate: 0
+        };
+
+        // Tile types with weights
+        const tileTypes = {
+            stone: { weight: 3, color: 'stone' },
+            soil: { weight: 2, color: 'soil' },
+            moss: { weight: 1, color: 'moss' },
+            water: { weight: 1, color: 'water' }
+        };
+
+        // Initialize game
+        function initGame() {
+            const container = document.getElementById('grid-container');
+            const rect = container.getBoundingClientRect();
+            state.gridWidth = rect.width;
+            state.gridHeight = rect.height;
+
+            // Create initial tile arrangement
+            createInitialTiles();
+
+            // Start game loop
+            requestAnimationFrame(gameLoop);
+
+            // Set up event listeners
+            setupDragListeners();
+        }
+
+        function createInitialTiles() {
+            const container = document.getElementById('grid-container');
+            state.tiles = [];
+
+            // Create a somewhat stable starting pile
+            const arrangements = [
+                // Bottom row - stable foundation
+                { x: 150, y: 420, type: 'stone', width: 60, height: 40 },
+                { x: 220, y: 420, type: 'stone', width: 50, height: 40 },
+                { x: 280, y: 420, type: 'stone', width: 55, height: 40 },
+
+                // Second row
+                { x: 160, y: 375, type: 'soil', width: 45, height: 40 },
+                { x: 215, y: 375, type: 'stone', width: 50, height: 40 },
+                { x: 275, y: 375, type: 'soil', width: 45, height: 40 },
+
+                // Third row
+                { x: 180, y: 330, type: 'moss', width: 40, height: 35 },
+                { x: 230, y: 330, type: 'soil', width: 45, height: 35 },
+                { x: 280, y: 335, type: 'moss', width: 35, height: 30 },
+
+                // Upper elements
+                { x: 200, y: 290, type: 'moss', width: 35, height: 30 },
+                { x: 245, y: 285, type: 'water', width: 40, height: 35 },
+
+                // Some loose tiles
+                { x: 100, y: 380, type: 'soil', width: 40, height: 35 },
+                { x: 340, y: 390, type: 'moss', width: 35, height: 30 },
+                { x: 120, y: 250, type: 'stone', width: 45, height: 35 },
+                { x: 350, y: 280, type: 'soil', width: 40, height: 35 },
+            ];
+
+            arrangements.forEach((config, index) => {
+                createTile(config, index);
+            });
+        }
+
+        function createTile(config, id) {
+            const container = document.getElementById('grid-container');
+            const tile = document.createElement('div');
+            const typeInfo = tileTypes[config.type];
+
+            tile.className = `tile ${typeInfo.color}`;
+            tile.id = `tile-${id}`;
+            tile.style.width = `${config.width}px`;
+            tile.style.height = `${config.height}px`;
+            tile.style.left = `${config.x}px`;
+            tile.style.top = `${config.y}px`;
+
+            container.appendChild(tile);
+
+            state.tiles.push({
+                id: id,
+                element: tile,
+                x: config.x,
+                y: config.y,
+                width: config.width,
+                height: config.height,
+                type: config.type,
+                weight: typeInfo.weight,
+                vx: 0,
+                vy: 0,
+                stress: 0,
+                settled: false,
+                settledTime: 0
+            });
+        }
+
+        // Drag system
+        function setupDragListeners() {
+            const container = document.getElementById('grid-container');
+
+            container.addEventListener('mousedown', startDrag);
+            container.addEventListener('mousemove', doDrag);
+            container.addEventListener('mouseup', endDrag);
+            container.addEventListener('mouseleave', endDrag);
+
+            // Touch support
+            container.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                startDrag({ clientX: touch.clientX, clientY: touch.clientY, target: e.target });
+            });
+            container.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                doDrag({ clientX: touch.clientX, clientY: touch.clientY });
+            });
+            container.addEventListener('touchend', endDrag);
+        }
+
+        function startDrag(e) {
+            const tileElement = e.target.closest('.tile');
+            if (!tileElement) return;
+
+            const tileId = parseInt(tileElement.id.replace('tile-', ''));
+            const tile = state.tiles.find(t => t.id === tileId);
+            if (!tile) return;
+
+            const container = document.getElementById('grid-container');
+            const rect = container.getBoundingClientRect();
+
+            state.dragging = tile;
+            state.dragOffset = {
+                x: e.clientX - rect.left - tile.x,
+                y: e.clientY - rect.top - tile.y
+            };
+
+            tile.element.classList.add('dragging');
+            tile.settled = false;
+            tile.vx = 0;
+            tile.vy = 0;
+
+            // Small coherence cost for intervention
+            state.coherence = Math.max(0, state.coherence - 0.5);
+        }
+
+        function doDrag(e) {
+            if (!state.dragging) return;
+
+            const container = document.getElementById('grid-container');
+            const rect = container.getBoundingClientRect();
+
+            let newX = e.clientX - rect.left - state.dragOffset.x;
+            let newY = e.clientY - rect.top - state.dragOffset.y;
+
+            // Constrain to grid
+            newX = Math.max(0, Math.min(state.gridWidth - state.dragging.width, newX));
+            newY = Math.max(0, Math.min(state.gridHeight - state.dragging.height, newY));
+
+            state.dragging.x = newX;
+            state.dragging.y = newY;
+            state.dragging.element.style.left = `${newX}px`;
+            state.dragging.element.style.top = `${newY}px`;
+        }
+
+        function endDrag() {
+            if (state.dragging) {
+                state.dragging.element.classList.remove('dragging');
+                playSound('place');
+                state.dragging = null;
+            }
+        }
+
+        // Physics simulation
+        function gameLoop(timestamp) {
+            if (!state.running) return;
+
+            const deltaTime = timestamp - state.lastUpdate;
+            state.lastUpdate = timestamp;
+
+            if (deltaTime < 100) { // Prevent huge jumps
+                updatePhysics(deltaTime);
+                updateStress();
+                updateCoherence();
+                updateVisuals();
+                updateMusic(state.coherence);
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updatePhysics(dt) {
+            const gravity = 0.15;
+            const friction = 0.8;
+            const bounce = 0.3;
+
+            state.tiles.forEach(tile => {
+                if (tile === state.dragging) return;
+
+                // Apply gravity
+                tile.vy += gravity;
+
+                // Move
+                tile.x += tile.vx;
+                tile.y += tile.vy;
+
+                // Floor collision
+                const floorY = state.gridHeight - tile.height;
+                if (tile.y >= floorY) {
+                    tile.y = floorY;
+                    if (Math.abs(tile.vy) > 1) {
+                        playSound('place');
+                    }
+                    tile.vy *= -bounce;
+                    tile.vx *= friction;
+
+                    if (Math.abs(tile.vy) < 0.5) {
+                        tile.vy = 0;
+                    }
+                }
+
+                // Wall collisions
+                if (tile.x <= 0) {
+                    tile.x = 0;
+                    tile.vx *= -bounce;
+                }
+                if (tile.x >= state.gridWidth - tile.width) {
+                    tile.x = state.gridWidth - tile.width;
+                    tile.vx *= -bounce;
+                }
+
+                // Tile-to-tile collisions
+                state.tiles.forEach(other => {
+                    if (other === tile || other === state.dragging) return;
+
+                    if (tilesOverlap(tile, other)) {
+                        resolveTileCollision(tile, other);
+                    }
+                });
+
+                // Apply friction when on ground
+                if (tile.y >= floorY - 1) {
+                    tile.vx *= 0.9;
+                }
+
+                // Check if settled
+                const isSettled = Math.abs(tile.vx) < 0.1 && Math.abs(tile.vy) < 0.1;
+                if (isSettled && !tile.settled) {
+                    tile.settledTime++;
+                    if (tile.settledTime > 60) {
+                        tile.settled = true;
+                        tile.element.classList.add('settled');
+                        playSound('settle');
+                    }
+                } else if (!isSettled) {
+                    tile.settled = false;
+                    tile.settledTime = 0;
+                    tile.element.classList.remove('settled');
+                }
+
+                // Update element position
+                tile.element.style.left = `${tile.x}px`;
+                tile.element.style.top = `${tile.y}px`;
+            });
+        }
+
+        function tilesOverlap(a, b) {
+            return a.x < b.x + b.width &&
+                   a.x + a.width > b.x &&
+                   a.y < b.y + b.height &&
+                   a.y + a.height > b.y;
+        }
+
+        function resolveTileCollision(tile, other) {
+            // Calculate overlap
+            const overlapX = Math.min(tile.x + tile.width, other.x + other.width) - Math.max(tile.x, other.x);
+            const overlapY = Math.min(tile.y + tile.height, other.y + other.height) - Math.max(tile.y, other.y);
+
+            if (overlapX < overlapY) {
+                // Horizontal separation
+                if (tile.x < other.x) {
+                    tile.x -= overlapX / 2;
+                    tile.vx -= 0.5;
+                } else {
+                    tile.x += overlapX / 2;
+                    tile.vx += 0.5;
+                }
+                playSound('slide');
+            } else {
+                // Vertical separation
+                if (tile.y < other.y) {
+                    tile.y = other.y - tile.height;
+                    tile.vy = 0;
+
+                    // Transfer some stress downward
+                    other.stress += tile.weight * 0.1;
+                } else {
+                    tile.y = other.y + other.height;
+                    tile.vy = Math.abs(tile.vy) * 0.3;
+                }
+            }
+        }
+
+        function updateStress() {
+            // Calculate stress for each tile
+            state.tiles.forEach(tile => {
+                // Decay stress over time
+                tile.stress *= 0.95;
+
+                // Check support
+                const support = calculateSupport(tile);
+
+                if (support < 0.3 && tile.y < state.gridHeight - tile.height - 5) {
+                    // Unsupported - increase stress
+                    tile.stress += 0.5;
+                }
+
+                // Check weight from above
+                const weightAbove = calculateWeightAbove(tile);
+                tile.stress += weightAbove * 0.05;
+
+                // Apply stress visual states
+                tile.element.classList.remove('strained', 'stressed', 'cracked');
+
+                if (tile.stress > 8) {
+                    tile.element.classList.add('cracked');
+                    // Chance to break/slide
+                    if (Math.random() < 0.02) {
+                        tile.vx += (Math.random() - 0.5) * 3;
+                        tile.vy -= 1;
+                        playSound('crack');
+                    }
+                } else if (tile.stress > 4) {
+                    tile.element.classList.add('stressed');
+                } else if (tile.stress > 2) {
+                    tile.element.classList.add('strained');
+                }
+            });
+        }
+
+        function calculateSupport(tile) {
+            // Check how much of the tile is supported from below
+            let supportedWidth = 0;
+            const checkY = tile.y + tile.height + 2;
+
+            // Check floor
+            if (tile.y >= state.gridHeight - tile.height - 2) {
+                return 1;
+            }
+
+            // Check other tiles
+            state.tiles.forEach(other => {
+                if (other === tile) return;
+
+                if (other.y >= checkY && other.y < checkY + 10) {
+                    const overlapLeft = Math.max(tile.x, other.x);
+                    const overlapRight = Math.min(tile.x + tile.width, other.x + other.width);
+                    if (overlapRight > overlapLeft) {
+                        supportedWidth += overlapRight - overlapLeft;
+                    }
+                }
+            });
+
+            return Math.min(1, supportedWidth / tile.width);
+        }
+
+        function calculateWeightAbove(tile) {
+            let weight = 0;
+
+            state.tiles.forEach(other => {
+                if (other === tile) return;
+
+                // Check if other is above and overlapping
+                if (other.y + other.height < tile.y + 5 &&
+                    other.x < tile.x + tile.width &&
+                    other.x + other.width > tile.x) {
+                    weight += other.weight;
+                }
+            });
+
+            return weight;
+        }
+
+        function updateCoherence() {
+            // Calculate coherence based on system state
+            let movingTiles = 0;
+            let totalStress = 0;
+            let settledTiles = 0;
+
+            state.tiles.forEach(tile => {
+                if (Math.abs(tile.vx) > 0.5 || Math.abs(tile.vy) > 0.5) {
+                    movingTiles++;
+                }
+                totalStress += tile.stress;
+                if (tile.settled) {
+                    settledTiles++;
+                }
+            });
+
+            // Coherence increases with stillness, decreases with chaos
+            const targetCoherence =
+                100 -
+                (movingTiles * 8) -
+                (totalStress * 0.5) +
+                (settledTiles * 2);
+
+            // Smooth transition
+            state.coherence += (Math.max(0, Math.min(100, targetCoherence)) - state.coherence) * 0.02;
+        }
+
+        function updateVisuals() {
+            const statusText = document.querySelector('#status .state-text');
+            const coherenceField = document.getElementById('coherence-field');
+
+            // Update status text
+            statusText.classList.remove('coherent', 'unsettled', 'chaotic');
+
+            if (state.coherence > 65) {
+                statusText.textContent = 'stillness';
+                statusText.classList.add('coherent');
+                coherenceField.classList.remove('low');
+            } else if (state.coherence > 35) {
+                statusText.textContent = 'settling';
+                statusText.classList.add('unsettled');
+                coherenceField.classList.remove('low');
+            } else {
+                statusText.textContent = 'turbulence';
+                statusText.classList.add('chaotic');
+                coherenceField.classList.add('low');
+            }
+        }
+
+        // Rest function - graceful ending
+        function rest() {
+            const overlay = document.getElementById('fade-overlay');
+            overlay.classList.add('active');
+
+            // Fade out audio
+            const fadeAudio = setInterval(() => {
+                if (audioCoherent.volume > 0.05) {
+                    audioCoherent.volume -= 0.02;
+                    audioChaotic.volume = Math.max(0, audioChaotic.volume - 0.02);
+                } else {
+                    clearInterval(fadeAudio);
+                    audioCoherent.pause();
+                    audioChaotic.pause();
+                    state.running = false;
+                }
+            }, 100);
+        }
+
+        // Keyboard support for init
+        document.addEventListener('keydown', (e) => {
+            const audioInitActive = !document.getElementById('audio-init').classList.contains('hidden');
+
+            if (audioInitActive && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                initAudio();
+            }
+        });
+    </script>
+</body>
+</html>
