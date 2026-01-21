@@ -53,7 +53,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.015'/%3E%3C/svg%3E");
             pointer-events: none;
             z-index: 1000;
         }
@@ -701,7 +701,9 @@
                 vy: 0,
                 stress: 0,
                 settled: false,
-                settledTime: 0
+                settledTime: 0,
+                sleeping: false,
+                sleepFrames: 0
             });
         }
 
@@ -803,9 +805,31 @@
             const gravity = 0.15;
             const friction = 0.8;
             const bounce = 0.3;
+            const sleepThreshold = 0.08;
+            const sleepFramesRequired = 30;
 
             state.tiles.forEach(tile => {
                 if (tile === state.dragging) return;
+
+                // Check if tile is sleeping (skip physics for stable tiles)
+                if (tile.sleeping) {
+                    // Check if any neighbor is moving and might wake this tile
+                    let shouldWake = false;
+                    state.tiles.forEach(other => {
+                        if (other === tile || other.sleeping) return;
+                        if (tilesOverlap(tile, other) || tilesNearby(tile, other, 5)) {
+                            if (Math.abs(other.vx) > sleepThreshold || Math.abs(other.vy) > sleepThreshold) {
+                                shouldWake = true;
+                            }
+                        }
+                    });
+                    if (shouldWake) {
+                        tile.sleeping = false;
+                        tile.sleepFrames = 0;
+                    } else {
+                        return; // Stay asleep, skip physics
+                    }
+                }
 
                 // Apply gravity
                 tile.vy += gravity;
@@ -853,8 +877,23 @@
                     tile.vx *= 0.9;
                 }
 
-                // Check if settled
+                // Check if settled and potentially sleeping
+                const isVeryStill = Math.abs(tile.vx) < sleepThreshold && Math.abs(tile.vy) < sleepThreshold;
                 const isSettled = Math.abs(tile.vx) < 0.1 && Math.abs(tile.vy) < 0.1;
+
+                if (isVeryStill) {
+                    tile.sleepFrames++;
+                    // Force to complete stillness and enter sleep after enough frames
+                    if (tile.sleepFrames > sleepFramesRequired) {
+                        tile.vx = 0;
+                        tile.vy = 0;
+                        tile.sleeping = true;
+                    }
+                } else {
+                    tile.sleepFrames = 0;
+                    tile.sleeping = false;
+                }
+
                 if (isSettled && !tile.settled) {
                     tile.settledTime++;
                     if (tile.settledTime > 60) {
@@ -879,6 +918,13 @@
                    a.x + a.width > b.x &&
                    a.y < b.y + b.height &&
                    a.y + a.height > b.y;
+        }
+
+        function tilesNearby(a, b, margin) {
+            return a.x - margin < b.x + b.width &&
+                   a.x + a.width + margin > b.x &&
+                   a.y - margin < b.y + b.height &&
+                   a.y + a.height + margin > b.y;
         }
 
         function resolveTileCollision(tile, other) {
@@ -1008,14 +1054,18 @@
             });
 
             // Coherence increases with stillness, decreases with chaos
+            // Dampened penalties for a more "tending" feel rather than "panicking"
             const targetCoherence =
                 100 -
-                (movingTiles * 8) -
-                (totalStress * 0.5) +
-                (settledTiles * 2);
+                (movingTiles * 3) -
+                (totalStress * 0.3) +
+                (settledTiles * 1.5);
 
-            // Smooth transition
-            state.coherence += (Math.max(0, Math.min(100, targetCoherence)) - state.coherence) * 0.02;
+            // Natural recovery drift - coherence slowly returns if nothing moves
+            const recoveryRate = movingTiles === 0 ? 0.03 : 0.015;
+
+            // Smooth transition with recovery
+            state.coherence += (Math.max(0, Math.min(100, targetCoherence)) - state.coherence) * recoveryRate;
         }
 
         function updateVisuals() {
@@ -1045,18 +1095,24 @@
             const overlay = document.getElementById('fade-overlay');
             overlay.classList.add('active');
 
-            // Fade out audio
-            const fadeAudio = setInterval(() => {
-                if (audioCoherent.volume > 0.05) {
-                    audioCoherent.volume -= 0.02;
-                    audioChaotic.volume = Math.max(0, audioChaotic.volume - 0.02);
-                } else {
-                    clearInterval(fadeAudio);
-                    audioCoherent.pause();
-                    audioChaotic.pause();
-                    state.running = false;
-                }
-            }, 100);
+            // Let the simulation continue for a few more seconds during fade
+            // so the player hears the final settling sounds
+            const restDelay = 5000; // 5 seconds of settling sounds
+
+            // Start fading audio after the settling period
+            setTimeout(() => {
+                const fadeAudio = setInterval(() => {
+                    if (audioCoherent.volume > 0.05) {
+                        audioCoherent.volume -= 0.02;
+                        audioChaotic.volume = Math.max(0, audioChaotic.volume - 0.02);
+                    } else {
+                        clearInterval(fadeAudio);
+                        audioCoherent.pause();
+                        audioChaotic.pause();
+                        state.running = false;
+                    }
+                }, 100);
+            }, restDelay);
         }
 
         // Keyboard support for init
