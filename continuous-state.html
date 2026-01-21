@@ -247,20 +247,17 @@
             opacity: 1;
         }
 
-        /* Bottom status - minimal */
+        /* Status indicator - above grid */
         #status {
-            margin-top: 1.5rem;
-            font-size: clamp(0.7rem, 1.5vw, 0.85rem);
-            letter-spacing: 0.15rem;
-            padding: 0.75rem 1.25rem;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--stone-dark);
-            border-radius: 2px;
-            display: inline-block;
+            margin-bottom: 1rem;
+            font-size: clamp(0.75rem, 1.5vw, 0.9rem);
+            letter-spacing: 0.2rem;
+            padding: 0.5rem 1.5rem;
+            background: transparent;
+            border: none;
+            display: block;
             color: var(--text-dim);
-            box-shadow:
-                0 2px 8px rgba(0, 0, 0, 0.3),
-                inset 0 1px 2px rgba(255, 255, 255, 0.02);
+            text-align: center;
         }
 
         #status .state-text {
@@ -281,19 +278,22 @@
 
         .instructions {
             margin-top: 1rem;
+            margin-bottom: 0.75rem;
             font-size: clamp(0.6rem, 1.3vw, 0.75rem);
             color: var(--text-dim);
             letter-spacing: 0.1rem;
             animation: fadeIn 1.5s ease-out 0.6s both;
             font-style: italic;
+            text-align: center;
         }
 
-        /* Rest button */
+        /* Rest button - below everything, centered */
         #rest-btn {
-            margin-top: 1rem;
+            display: block;
+            margin: 0 auto;
             font-family: 'IBM Plex Mono', monospace;
             font-size: 0.75rem;
-            padding: 0.5rem 1rem;
+            padding: 0.5rem 1.5rem;
             background: transparent;
             border: 1px solid var(--stone-dark);
             color: var(--text-dim);
@@ -416,6 +416,10 @@
             <div class="subtitle">observe, intervene, wait</div>
         </header>
 
+        <div id="status">
+            <span class="state-text coherent">stillness</span>
+        </div>
+
         <div id="game-container">
             <div id="grid-container">
                 <div id="coherence-field"></div>
@@ -423,15 +427,11 @@
             </div>
         </div>
 
-        <div id="status">
-            <span class="state-text coherent">stillness</span>
-        </div>
-
-        <button id="rest-btn" onclick="rest()">rest</button>
-
         <div class="instructions">
             drag tiles gently to intervene
         </div>
+
+        <button id="rest-btn" onclick="rest()">rest</button>
     </div>
 
     <!-- Audio elements -->
@@ -597,32 +597,76 @@
             const container = document.getElementById('grid-container');
             state.tiles = [];
 
-            // Create a somewhat stable starting pile
+            // Create a rich starting arrangement with ~40 tiles
             const arrangements = [
-                // Bottom row - stable foundation
-                { x: 150, y: 420, type: 'stone', width: 60, height: 40 },
-                { x: 220, y: 420, type: 'stone', width: 50, height: 40 },
-                { x: 280, y: 420, type: 'stone', width: 55, height: 40 },
+                // Bottom foundation layer - wide and stable
+                { x: 50, y: 455, type: 'stone', width: 70, height: 35 },
+                { x: 125, y: 455, type: 'stone', width: 65, height: 35 },
+                { x: 195, y: 455, type: 'stone', width: 60, height: 35 },
+                { x: 260, y: 455, type: 'stone', width: 65, height: 35 },
+                { x: 330, y: 455, type: 'stone', width: 70, height: 35 },
+                { x: 405, y: 455, type: 'stone', width: 60, height: 35 },
 
-                // Second row
-                { x: 160, y: 375, type: 'soil', width: 45, height: 40 },
-                { x: 215, y: 375, type: 'stone', width: 50, height: 40 },
-                { x: 275, y: 375, type: 'soil', width: 45, height: 40 },
+                // Second layer
+                { x: 70, y: 415, type: 'stone', width: 55, height: 35 },
+                { x: 130, y: 415, type: 'soil', width: 50, height: 35 },
+                { x: 185, y: 415, type: 'stone', width: 55, height: 35 },
+                { x: 245, y: 415, type: 'soil', width: 50, height: 35 },
+                { x: 300, y: 415, type: 'stone', width: 55, height: 35 },
+                { x: 360, y: 415, type: 'soil', width: 50, height: 35 },
+                { x: 415, y: 415, type: 'stone', width: 45, height: 35 },
 
-                // Third row
-                { x: 180, y: 330, type: 'moss', width: 40, height: 35 },
-                { x: 230, y: 330, type: 'soil', width: 45, height: 35 },
-                { x: 280, y: 335, type: 'moss', width: 35, height: 30 },
+                // Third layer
+                { x: 90, y: 375, type: 'soil', width: 45, height: 35 },
+                { x: 145, y: 375, type: 'stone', width: 50, height: 35 },
+                { x: 200, y: 375, type: 'soil', width: 45, height: 35 },
+                { x: 250, y: 375, type: 'moss', width: 40, height: 30 },
+                { x: 295, y: 375, type: 'soil', width: 50, height: 35 },
+                { x: 350, y: 375, type: 'stone', width: 45, height: 35 },
+                { x: 400, y: 378, type: 'moss', width: 40, height: 30 },
 
-                // Upper elements
-                { x: 200, y: 290, type: 'moss', width: 35, height: 30 },
-                { x: 245, y: 285, type: 'water', width: 40, height: 35 },
+                // Fourth layer
+                { x: 110, y: 335, type: 'moss', width: 40, height: 30 },
+                { x: 160, y: 335, type: 'soil', width: 45, height: 35 },
+                { x: 210, y: 338, type: 'moss', width: 35, height: 28 },
+                { x: 255, y: 335, type: 'water', width: 40, height: 32 },
+                { x: 300, y: 335, type: 'soil', width: 45, height: 35 },
+                { x: 350, y: 338, type: 'moss', width: 38, height: 28 },
 
-                // Some loose tiles
-                { x: 100, y: 380, type: 'soil', width: 40, height: 35 },
-                { x: 340, y: 390, type: 'moss', width: 35, height: 30 },
-                { x: 120, y: 250, type: 'stone', width: 45, height: 35 },
-                { x: 350, y: 280, type: 'soil', width: 40, height: 35 },
+                // Fifth layer - getting precarious
+                { x: 135, y: 298, type: 'moss', width: 35, height: 28 },
+                { x: 180, y: 295, type: 'water', width: 38, height: 30 },
+                { x: 225, y: 298, type: 'moss', width: 35, height: 28 },
+                { x: 270, y: 295, type: 'soil', width: 40, height: 32 },
+                { x: 320, y: 298, type: 'moss', width: 35, height: 28 },
+
+                // Upper loose elements
+                { x: 160, y: 258, type: 'water', width: 35, height: 28 },
+                { x: 205, y: 255, type: 'moss', width: 32, height: 26 },
+                { x: 250, y: 258, type: 'water', width: 35, height: 28 },
+                { x: 295, y: 260, type: 'moss', width: 30, height: 25 },
+
+                // Scattered loose tiles on the sides
+                { x: 30, y: 380, type: 'soil', width: 40, height: 32 },
+                { x: 25, y: 340, type: 'moss', width: 35, height: 28 },
+                { x: 40, y: 290, type: 'stone', width: 45, height: 35 },
+                { x: 35, y: 240, type: 'moss', width: 32, height: 26 },
+
+                { x: 430, y: 370, type: 'soil', width: 40, height: 32 },
+                { x: 440, y: 320, type: 'moss', width: 35, height: 28 },
+                { x: 425, y: 270, type: 'stone', width: 45, height: 35 },
+                { x: 435, y: 220, type: 'water', width: 35, height: 28 },
+
+                // Top scattered elements
+                { x: 80, y: 200, type: 'moss', width: 30, height: 25 },
+                { x: 180, y: 210, type: 'water', width: 32, height: 26 },
+                { x: 280, y: 205, type: 'moss', width: 30, height: 25 },
+                { x: 380, y: 200, type: 'water', width: 32, height: 26 },
+
+                // A few more at varied heights
+                { x: 120, y: 160, type: 'moss', width: 28, height: 24 },
+                { x: 240, y: 155, type: 'water', width: 30, height: 25 },
+                { x: 340, y: 165, type: 'moss', width: 28, height: 24 },
             ];
 
             arrangements.forEach((config, index) => {
