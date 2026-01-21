@@ -199,6 +199,25 @@
             margin: 0 auto;
         }
 
+        .back-link {
+            display: inline-block;
+            margin-top: 2rem;
+            font-size: clamp(0.7rem, 1.5vw, 0.8rem);
+            color: var(--text-dim);
+            text-decoration: none;
+            letter-spacing: 0.15rem;
+            transition: color 0.3s ease;
+        }
+
+        .back-link:hover {
+            color: var(--text-bright);
+        }
+
+        .back-link::before {
+            content: '← ';
+            opacity: 0.6;
+        }
+
         @keyframes fadeIn {
             from {
                 opacity: 0;
@@ -266,6 +285,7 @@
                 not winning, just tending<br>
                 not rushing, just being
             </p>
+            <a href="https://www.fairweatherproductions.com/gentle-machine/games.html" class="back-link">the gentle machine</a>
         </footer>
     </div>
 </body>
