@@ -519,66 +519,10 @@
             settle: 500   // ms between settle sounds
         };
 
-        // Procedural sounds
+        // Procedural sounds - disabled for now (was causing crackling)
         function playSound(type) {
-            if (!audioContext) return;
-
-            // Throttle sounds to prevent crackling
-            const now = Date.now();
-            if (now - soundCooldowns[type] < soundMinIntervals[type]) {
-                return; // Too soon, skip this sound
-            }
-            soundCooldowns[type] = now;
-
-            const audioTime = audioContext.currentTime;
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-
-            switch(type) {
-                case 'place':
-                    oscillator.type = 'sine';
-                    oscillator.frequency.setValueAtTime(150, audioTime);
-                    oscillator.frequency.exponentialRampToValueAtTime(80, audioTime + 0.1);
-                    gainNode.gain.setValueAtTime(0.06, audioTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioTime + 0.1);
-                    oscillator.start(audioTime);
-                    oscillator.stop(audioTime + 0.1);
-                    break;
-
-                case 'slide':
-                    oscillator.type = 'triangle';
-                    oscillator.frequency.setValueAtTime(100, audioTime);
-                    oscillator.frequency.exponentialRampToValueAtTime(60, audioTime + 0.15);
-                    gainNode.gain.setValueAtTime(0.03, audioTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioTime + 0.15);
-                    oscillator.start(audioTime);
-                    oscillator.stop(audioTime + 0.15);
-                    break;
-
-                case 'crack':
-                    oscillator.type = 'sawtooth';
-                    oscillator.frequency.setValueAtTime(200, audioTime);
-                    oscillator.frequency.exponentialRampToValueAtTime(50, audioTime + 0.08);
-                    gainNode.gain.setValueAtTime(0.07, audioTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioTime + 0.08);
-                    oscillator.start(audioTime);
-                    oscillator.stop(audioTime + 0.08);
-                    break;
-
-                case 'settle':
-                    oscillator.type = 'sine';
-                    oscillator.frequency.setValueAtTime(200, audioTime);
-                    oscillator.frequency.setValueAtTime(250, audioTime + 0.05);
-                    oscillator.frequency.setValueAtTime(200, audioTime + 0.1);
-                    gainNode.gain.setValueAtTime(0.04, audioTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioTime + 0.2);
-                    oscillator.start(audioTime);
-                    oscillator.stop(audioTime + 0.2);
-                    break;
-            }
+            // Sounds disabled - relying on ambient music only
+            return;
         }
 
         // Game state
