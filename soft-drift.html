@@ -492,11 +492,12 @@
             // Check if dropped on a customer
             for (const customer of game.customers) {
                 if (!customer.leaving && customer.order && customer.order.length > 0) {
+                    // Generous hitbox that covers character + speech bubble
                     const customerBounds = {
-                        x: customer.x - 20,
-                        y: customer.y - 40,
-                        width: 60,
-                        height: 80
+                        x: customer.x - 40,
+                        y: customer.y - 90,  // Extends up to cover speech bubble
+                        width: 80,
+                        height: 130
                     };
 
                     if (cube.x + cube.size/2 > customerBounds.x &&
