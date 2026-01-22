@@ -401,6 +401,39 @@
             opacity: 1;
             pointer-events: all;
         }
+
+        #wake-btn {
+            position: absolute;
+            bottom: 3rem;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.85rem;
+            padding: 0.6rem 2rem;
+            background: transparent;
+            border: 1px solid var(--stone-dark);
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: all 0.5s ease;
+            text-transform: lowercase;
+            letter-spacing: 0.2rem;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #fade-overlay.active #wake-btn {
+            opacity: 1;
+            pointer-events: all;
+            animation: fadeIn 2s ease-out 1s both;
+        }
+
+        #wake-btn:hover,
+        #wake-btn:focus {
+            border-color: var(--sand);
+            color: var(--sand);
+            box-shadow: 0 2px 12px rgba(196, 184, 165, 0.15);
+            outline: none;
+        }
     </style>
 </head>
 <body>
@@ -414,7 +447,9 @@
     </div>
 
     <!-- Fade overlay for rest -->
-    <div id="fade-overlay"></div>
+    <div id="fade-overlay">
+        <button id="wake-btn" onclick="wake()">wake</button>
+    </div>
 
     <div class="container">
         <header>
@@ -1143,6 +1178,59 @@
                 audioCoherent.currentTime = 0;
                 audioCoherent.play();
             };
+        }
+
+        function wake() {
+            if (!restMode) return; // Not in rest mode
+
+            restMode = false;
+
+            // Restore loop behavior
+            audioCoherent.loop = true;
+            audioChaotic.loop = true;
+
+            // Clear the onended handlers
+            audioCoherent.onended = null;
+            audioChaotic.onended = null;
+
+            // Fade out overlay
+            const overlay = document.getElementById('fade-overlay');
+            overlay.classList.remove('active');
+
+            // Gradually restore music to normal levels based on current coherence
+            const fadeToWake = setInterval(() => {
+                let done = true;
+                const targetCoherent = 0.1 + (state.coherence / 100) * 0.4;
+                const targetChaotic = 0.4 - (state.coherence / 100) * 0.35;
+
+                // Fade coherent track
+                const diffCoherent = targetCoherent - audioCoherent.volume;
+                if (Math.abs(diffCoherent) > 0.02) {
+                    audioCoherent.volume += diffCoherent * 0.1;
+                    done = false;
+                }
+
+                // Start and fade in chaotic track if needed
+                if (audioChaotic.paused && targetChaotic > 0.02) {
+                    audioChaotic.volume = 0;
+                    audioChaotic.play().catch(err => console.log('Audio error:', err));
+                }
+
+                const diffChaotic = targetChaotic - audioChaotic.volume;
+                if (Math.abs(diffChaotic) > 0.02) {
+                    audioChaotic.volume += diffChaotic * 0.1;
+                    done = false;
+                }
+
+                if (done) {
+                    clearInterval(fadeToWake);
+                }
+            }, 100);
+
+            // Resume physics
+            state.running = true;
+            state.lastUpdate = performance.now();
+            requestAnimationFrame(gameLoop);
         }
 
         // Keyboard support for init
