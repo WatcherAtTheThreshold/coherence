@@ -140,6 +140,7 @@ Tend a system of settling tiles. Watch stress accumulate and release. Find still
 ### Rest Mode
 - Click "rest" to stop physics and listen to music
 - Tracks play sequentially in a peaceful loop
+- Click "wake" to return to the simulation
 - This is not a failure state - just contemplation
 
 ---
