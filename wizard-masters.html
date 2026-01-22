@@ -237,7 +237,7 @@
             <button onclick="resetGame()">new game</button>
         </div>
 
-        <div class="instructions">drag wizards to move one square in any direction</div>
+        <div class="instructions">drag to move · green = advantage · red = disadvantage · click wizards to emote</div>
 
         <div class="captured-area">
             <div class="captured-side" id="player-captured">
@@ -345,6 +345,101 @@
             });
         }
 
+        function playDeflect() {
+            if (!audioContext) return;
+            const now = audioContext.currentTime;
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(600, now);
+            osc.frequency.linearRampToValueAtTime(200, now + 0.15);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0.001, now + 0.2);
+            osc.start(now);
+            osc.stop(now + 0.25);
+        }
+
+        function playEmote() {
+            if (!audioContext) return;
+            const now = audioContext.currentTime;
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, now);
+            osc.frequency.setValueAtTime(1100, now + 0.05);
+            osc.frequency.setValueAtTime(880, now + 0.1);
+            gain.gain.setValueAtTime(0.05, now);
+            gain.gain.linearRampToValueAtTime(0.001, now + 0.15);
+            osc.start(now);
+            osc.stop(now + 0.2);
+        }
+
+        // ============================================
+        // PARTICLE SYSTEM
+        // ============================================
+
+        function spawnCaptureParticles(x, y, element) {
+            const color = ELEMENTS[element].color;
+            const glow = ELEMENTS[element].glow;
+            for (let i = 0; i < 12; i++) {
+                const angle = (Math.PI * 2 / 12) * i + Math.random() * 0.5;
+                const speed = 2 + Math.random() * 3;
+                game.particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 1,
+                    decay: 0.02 + Math.random() * 0.02,
+                    size: 3 + Math.random() * 4,
+                    color: Math.random() > 0.5 ? color : glow
+                });
+            }
+        }
+
+        function spawnDeflectParticles(x, y, element) {
+            const color = ELEMENTS[element].glow;
+            for (let i = 0; i < 8; i++) {
+                const angle = (Math.PI * 2 / 8) * i;
+                game.particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * 4,
+                    vy: Math.sin(angle) * 4,
+                    life: 1,
+                    decay: 0.04,
+                    size: 2 + Math.random() * 2,
+                    color: color
+                });
+            }
+        }
+
+        function updateParticles() {
+            for (let i = game.particles.length - 1; i >= 0; i--) {
+                const p = game.particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.1; // gravity
+                p.life -= p.decay;
+                if (p.life <= 0) {
+                    game.particles.splice(i, 1);
+                }
+            }
+        }
+
+        function drawParticles() {
+            for (const p of game.particles) {
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+        }
+
         // ============================================
         // GAME STATE
         // ============================================
@@ -354,15 +449,23 @@
         const BOARD_OFFSET_X = 0;
         const BOARD_OFFSET_Y = 0;
 
-        // Element types with colors
+        // Element types with colors and advantages
+        // Rock-paper-scissors: each element beats two others
         const ELEMENTS = {
-            fire: { color: '#e07050', glow: '#ff9070' },
-            water: { color: '#5080b0', glow: '#70a0d0' },
-            earth: { color: '#70a060', glow: '#90c080' },
-            air: { color: '#a0a0c0', glow: '#c0c0e0' },
-            electric: { color: '#d0c050', glow: '#f0e070' },
-            cosmic: { color: '#a070c0', glow: '#c090e0' }
+            fire: { color: '#e07050', glow: '#ff9070', beats: ['earth', 'air'] },
+            water: { color: '#5080b0', glow: '#70a0d0', beats: ['fire', 'electric'] },
+            earth: { color: '#70a060', glow: '#90c080', beats: ['water', 'electric'] },
+            air: { color: '#a0a0c0', glow: '#c0c0e0', beats: ['water', 'earth'] },
+            electric: { color: '#d0c050', glow: '#f0e070', beats: ['air', 'cosmic'] },
+            cosmic: { color: '#a070c0', glow: '#c090e0', beats: ['fire', 'cosmic'] }
         };
+
+        // Check elemental advantage
+        function getAdvantage(attackerElement, defenderElement) {
+            if (ELEMENTS[attackerElement].beats.includes(defenderElement)) return 'advantage';
+            if (ELEMENTS[defenderElement].beats.includes(attackerElement)) return 'disadvantage';
+            return 'neutral';
+        }
 
         // Wizard appearance variants
         const SKIN_TONES = ['#e8c4a0', '#c49070', '#8b6040', '#d4a878', '#f0d0b0', '#a07050'];
@@ -382,7 +485,12 @@
             animatingWizard: null,
             animationProgress: 0,
             gameOver: false,
-            winner: null
+            winner: null,
+            // New features
+            particles: [],
+            scorchMarks: [], // {col, row, element, opacity}
+            emoteWizard: null,
+            emoteTimer: 0
         };
 
         // ============================================
@@ -475,29 +583,62 @@
             wizard.isMoving = true;
             game.animatingWizard = wizard;
 
-            // If capturing
+            // If attempting capture
             if (targetWizard) {
-                // Make captured wizard flee
-                targetWizard.isFleeing = true;
-                targetWizard.fleeDirection = targetWizard.team === 'player' ? -1 : 1;
+                const advantage = getAdvantage(wizard.element, targetWizard.element);
+                const captureX = toCol * CELL_SIZE + CELL_SIZE / 2;
+                const captureY = toRow * CELL_SIZE + CELL_SIZE / 2;
 
-                // Add to captured list
-                if (targetWizard.team === 'player') {
-                    game.playerCaptured.push(targetWizard);
-                    game.playerWizards = game.playerWizards.filter(w => w.id !== targetWizard.id);
+                // Disadvantage: defender escapes, attacker still moves
+                if (advantage === 'disadvantage') {
+                    // Defender deflects and escapes
+                    spawnDeflectParticles(captureX, captureY, targetWizard.element);
+                    playDeflect();
+
+                    // Find escape square for defender
+                    const escapeDir = targetWizard.team === 'player' ? -1 : 1;
+                    const escapeCol = targetWizard.col + escapeDir;
+                    if (escapeCol >= 0 && escapeCol < GRID_SIZE && !getWizardAt(escapeCol, targetWizard.row)) {
+                        targetWizard.col = escapeCol;
+                        targetWizard.animX = escapeCol * CELL_SIZE + CELL_SIZE / 2;
+                    }
+                    // Move attacker to the square anyway
+                    wizard.col = toCol;
+                    wizard.row = toRow;
                 } else {
-                    game.enemyCaptured.push(targetWizard);
-                    game.enemyWizards = game.enemyWizards.filter(w => w.id !== targetWizard.id);
-                }
+                    // Advantage or neutral: capture succeeds
+                    targetWizard.isFleeing = true;
+                    targetWizard.fleeDirection = targetWizard.team === 'player' ? -1 : 1;
 
-                playCapture();
+                    // Add scorch mark
+                    game.scorchMarks.push({
+                        col: toCol,
+                        row: toRow,
+                        element: targetWizard.element,
+                        opacity: 0.6
+                    });
+
+                    // Spawn capture particles
+                    spawnCaptureParticles(captureX, captureY, targetWizard.element);
+
+                    // Add to captured list
+                    if (targetWizard.team === 'player') {
+                        game.playerCaptured.push(targetWizard);
+                        game.playerWizards = game.playerWizards.filter(w => w.id !== targetWizard.id);
+                    } else {
+                        game.enemyCaptured.push(targetWizard);
+                        game.enemyWizards = game.enemyWizards.filter(w => w.id !== targetWizard.id);
+                    }
+
+                    playCapture();
+                    wizard.col = toCol;
+                    wizard.row = toRow;
+                }
             } else {
                 playMove();
+                wizard.col = toCol;
+                wizard.row = toRow;
             }
-
-            // Update position (actual position updates after animation)
-            wizard.col = toCol;
-            wizard.row = toRow;
         }
 
         function checkVictory() {
@@ -624,21 +765,40 @@
         }
 
         function startDrag(e) {
-            if (game.currentTurn !== 'player' || game.gameOver || game.animatingWizard) return;
+            if (game.gameOver || game.animatingWizard) return;
 
             const pos = getCanvasPos(e);
             const col = Math.floor(pos.x / CELL_SIZE);
             const row = Math.floor(pos.y / CELL_SIZE);
 
+            // Check for click on any wizard (for emotes)
+            const clickedWizard = [...game.playerWizards, ...game.enemyWizards].find(w => w.col === col && w.row === row);
+
+            if (game.currentTurn !== 'player') {
+                // Can still trigger emotes when not your turn
+                if (clickedWizard) {
+                    triggerEmote(clickedWizard);
+                }
+                return;
+            }
+
             const wizard = game.playerWizards.find(w => w.col === col && w.row === row);
             if (wizard) {
                 game.dragging = wizard;
+                game.dragStartPos = { x: pos.x, y: pos.y };
                 game.dragOffset = {
                     x: pos.x - wizard.animX,
                     y: pos.y - wizard.animY
                 };
                 game.selectedWizard = wizard;
             }
+        }
+
+        function triggerEmote(wizard) {
+            if (game.emoteWizard === wizard) return; // Already emoting
+            game.emoteWizard = wizard;
+            game.emoteTimer = 30; // frames
+            playEmote();
         }
 
         function doDrag(e) {
@@ -655,7 +815,17 @@
             const toCol = Math.floor(wizard.animX / CELL_SIZE);
             const toRow = Math.floor(wizard.animY / CELL_SIZE);
 
-            if (isValidMove(wizard, toCol, toRow)) {
+            // Check if this was a click (barely moved)
+            const dragDist = game.dragStartPos ?
+                Math.sqrt(Math.pow(wizard.animX - (wizard.col * CELL_SIZE + CELL_SIZE / 2), 2) +
+                         Math.pow(wizard.animY - (wizard.row * CELL_SIZE + CELL_SIZE / 2), 2)) : 0;
+
+            if (dragDist < 10) {
+                // This was a click - trigger emote
+                wizard.animX = wizard.col * CELL_SIZE + CELL_SIZE / 2;
+                wizard.animY = wizard.row * CELL_SIZE + CELL_SIZE / 2;
+                triggerEmote(wizard);
+            } else if (isValidMove(wizard, toCol, toRow)) {
                 moveWizard(wizard, toCol, toRow);
             } else {
                 // Snap back
@@ -665,6 +835,7 @@
 
             game.dragging = null;
             game.selectedWizard = null;
+            game.dragStartPos = null;
         }
 
         // ============================================
@@ -678,6 +849,7 @@
             drawBoard();
             drawValidMoves();
             drawWizards();
+            drawParticles();
 
             // Draw captured wizards
             drawCapturedWizards(playerCapturedCtx, game.playerCaptured);
@@ -698,6 +870,18 @@
                 }
             }
 
+            // Draw scorch marks
+            for (const mark of game.scorchMarks) {
+                const x = mark.col * CELL_SIZE + CELL_SIZE / 2;
+                const y = mark.row * CELL_SIZE + CELL_SIZE / 2;
+                const gradient = ctx.createRadialGradient(x, y, 0, x, y, CELL_SIZE / 2);
+                const color = ELEMENTS[mark.element].color;
+                gradient.addColorStop(0, color + Math.floor(mark.opacity * 60).toString(16).padStart(2, '0'));
+                gradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(mark.col * CELL_SIZE, mark.row * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            }
+
             // Board border
             ctx.strokeStyle = '#3d3832';
             ctx.lineWidth = 2;
@@ -708,7 +892,6 @@
             if (!game.selectedWizard || game.currentTurn !== 'player') return;
 
             const wizard = game.selectedWizard;
-            ctx.fillStyle = 'rgba(80, 128, 176, 0.4)';
 
             for (let dc = -1; dc <= 1; dc++) {
                 for (let dr = -1; dr <= 1; dr++) {
@@ -717,7 +900,19 @@
                     const toRow = wizard.row + dr;
                     if (isValidMove(wizard, toCol, toRow)) {
                         const targetWizard = getWizardAt(toCol, toRow);
-                        ctx.fillStyle = targetWizard ? 'rgba(224, 112, 80, 0.4)' : 'rgba(80, 128, 176, 0.4)';
+                        if (targetWizard) {
+                            // Show elemental advantage with color
+                            const advantage = getAdvantage(wizard.element, targetWizard.element);
+                            if (advantage === 'advantage') {
+                                ctx.fillStyle = 'rgba(112, 160, 96, 0.5)'; // Green - advantage
+                            } else if (advantage === 'disadvantage') {
+                                ctx.fillStyle = 'rgba(180, 80, 80, 0.5)'; // Red - disadvantage
+                            } else {
+                                ctx.fillStyle = 'rgba(224, 180, 80, 0.5)'; // Yellow - neutral
+                            }
+                        } else {
+                            ctx.fillStyle = 'rgba(80, 128, 176, 0.4)'; // Blue - empty
+                        }
                         ctx.fillRect(toCol * CELL_SIZE, toRow * CELL_SIZE, CELL_SIZE, CELL_SIZE);
                     }
                 }
@@ -739,17 +934,42 @@
         }
 
         function drawWizard(wizard) {
-            const x = Math.floor(wizard.animX);
-            const y = Math.floor(wizard.animY);
+            let x = Math.floor(wizard.animX);
+            let y = Math.floor(wizard.animY);
             const element = ELEMENTS[wizard.element];
 
-            // Glow effect
-            const gradient = ctx.createRadialGradient(x, y, 5, x, y, 22);
-            gradient.addColorStop(0, element.glow + '60');
+            // Emote animation - bounce and sparkle
+            const isEmoting = game.emoteWizard === wizard;
+            let emoteOffset = 0;
+            if (isEmoting) {
+                emoteOffset = Math.sin(game.emoteTimer * 0.5) * 5;
+                y -= Math.abs(emoteOffset);
+
+                // Sparkles around wizard
+                if (game.emoteTimer % 5 === 0) {
+                    const sparkleAngle = Math.random() * Math.PI * 2;
+                    const sparkleX = x + Math.cos(sparkleAngle) * 25;
+                    const sparkleY = y + Math.sin(sparkleAngle) * 25;
+                    game.particles.push({
+                        x: sparkleX, y: sparkleY,
+                        vx: Math.cos(sparkleAngle) * 0.5,
+                        vy: -1,
+                        life: 1,
+                        decay: 0.05,
+                        size: 3,
+                        color: element.glow
+                    });
+                }
+            }
+
+            // Glow effect (bigger when emoting)
+            const glowSize = isEmoting ? 28 : 22;
+            const gradient = ctx.createRadialGradient(x, y, 5, x, y, glowSize);
+            gradient.addColorStop(0, element.glow + (isEmoting ? '90' : '60'));
             gradient.addColorStop(1, 'transparent');
             ctx.fillStyle = gradient;
             ctx.beginPath();
-            ctx.arc(x, y, 22, 0, Math.PI * 2);
+            ctx.arc(x, y, glowSize, 0, Math.PI * 2);
             ctx.fill();
 
             // Robe (body)
@@ -916,6 +1136,25 @@
                     wizard.animX += wizard.fleeDirection * 8;
                 }
             }
+
+            // Update particles
+            updateParticles();
+
+            // Fade scorch marks slowly
+            for (let i = game.scorchMarks.length - 1; i >= 0; i--) {
+                game.scorchMarks[i].opacity -= 0.0005;
+                if (game.scorchMarks[i].opacity <= 0) {
+                    game.scorchMarks.splice(i, 1);
+                }
+            }
+
+            // Update emote timer
+            if (game.emoteWizard) {
+                game.emoteTimer--;
+                if (game.emoteTimer <= 0) {
+                    game.emoteWizard = null;
+                }
+            }
         }
 
         function gameLoop() {
@@ -955,6 +1194,10 @@
             game.selectedWizard = null;
             game.dragging = null;
             game.animatingWizard = null;
+            game.particles = [];
+            game.scorchMarks = [];
+            game.emoteWizard = null;
+            game.emoteTimer = 0;
             statusEl.textContent = 'your move';
             statusEl.className = 'status player-turn';
         }
