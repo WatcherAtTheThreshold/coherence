@@ -16,6 +16,7 @@
             --accent-green: #00ff41;
             --accent-amber: #d4a574;
             --accent-warm: #c07050;
+            --accent-cosmic: #a070c0;
         }
 
         * {
@@ -150,6 +151,10 @@
             color: var(--accent-warm);
         }
 
+        .game-link:nth-child(4) .game-title {
+            color: var(--accent-cosmic);
+        }
+
         .game-link:nth-child(1):hover {
             border-color: rgba(0, 255, 65, 0.3);
             box-shadow: 0 8px 24px rgba(0, 255, 65, 0.1);
@@ -163,6 +168,11 @@
         .game-link:nth-child(3):hover {
             border-color: rgba(192, 112, 80, 0.3);
             box-shadow: 0 8px 24px rgba(192, 112, 80, 0.1);
+        }
+
+        .game-link:nth-child(4):hover {
+            border-color: rgba(160, 112, 192, 0.3);
+            box-shadow: 0 8px 24px rgba(160, 112, 192, 0.1);
         }
 
         .game-subtitle {
@@ -241,6 +251,10 @@
             animation: fadeIn 0.8s ease-out 0.5s both;
         }
 
+        .games .game-link:nth-child(4) {
+            animation: fadeIn 0.8s ease-out 0.65s both;
+        }
+
         @media (min-width: 600px) {
             .games {
                 gap: 1.25rem;
@@ -256,7 +270,7 @@
     <div class="container">
         <header>
             <h1>Coherence</h1>
-            <p class="tagline">three meditations on presence, patience, and the quiet act of tending</p>
+            <p class="tagline">four meditations on presence, patience, and the quiet act of tending</p>
         </header>
 
         <nav class="games">
@@ -276,6 +290,12 @@
                 <div class="game-title">Soft Drift</div>
                 <div class="game-subtitle">tend the stall</div>
                 <p class="game-description">Run a quiet market stall. Fulfill simple orders. Watch days pass. Small satisfactions in small exchanges.</p>
+            </a>
+
+            <a href="rooks-gambit.html" class="game-link">
+                <div class="game-title">Wizard Masters</div>
+                <div class="game-subtitle">elemental tactics</div>
+                <p class="game-description">Command elemental wizards on a shifting board. Move, capture, outlast. Simple rules, quiet strategy.</p>
             </a>
         </nav>
 
