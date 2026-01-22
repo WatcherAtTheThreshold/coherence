@@ -81,12 +81,15 @@
             display: inline-block;
             overflow: hidden;
             position: relative;
+            max-width: 100%;
         }
 
         #game-canvas {
             display: block;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
+            max-width: 100%;
+            height: auto;
         }
 
         .status {
@@ -145,23 +148,63 @@
             display: flex;
             justify-content: space-between;
             margin-top: 1rem;
-            gap: 2rem;
+            gap: 1rem;
+            max-width: 100%;
         }
 
         .captured-side {
             flex: 1;
-            min-height: 50px;
+            min-height: 40px;
             padding: 0.5rem;
             background: rgba(0, 0, 0, 0.2);
             border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .captured-side canvas {
+            max-width: 100%;
+            height: auto;
         }
 
         .captured-label {
-            font-size: 0.7rem;
+            font-size: clamp(0.6rem, 1.5vw, 0.7rem);
             color: var(--text-dim);
             margin-bottom: 0.3rem;
             text-transform: lowercase;
             letter-spacing: 0.1rem;
+        }
+
+        /* Mobile-specific adjustments */
+        @media (max-width: 480px) {
+            body {
+                padding: 0.5rem;
+            }
+
+            header {
+                margin-bottom: 0.5rem;
+            }
+
+            .status {
+                font-size: 0.8rem;
+            }
+
+            .controls {
+                margin-top: 0.75rem;
+            }
+
+            .instructions {
+                font-size: 0.6rem;
+                margin-top: 0.5rem;
+            }
+
+            .captured-area {
+                gap: 0.5rem;
+            }
+
+            .captured-side {
+                padding: 0.3rem;
+                min-height: 35px;
+            }
         }
 
         /* Audio init overlay */
@@ -385,16 +428,17 @@
         function spawnCaptureParticles(x, y, element) {
             const color = ELEMENTS[element].color;
             const glow = ELEMENTS[element].glow;
+            const s = CELL_SIZE / 50; // Scale factor
             for (let i = 0; i < 12; i++) {
                 const angle = (Math.PI * 2 / 12) * i + Math.random() * 0.5;
-                const speed = 2 + Math.random() * 3;
+                const speed = (2 + Math.random() * 3) * s;
                 game.particles.push({
                     x, y,
                     vx: Math.cos(angle) * speed,
                     vy: Math.sin(angle) * speed,
                     life: 1,
                     decay: 0.02 + Math.random() * 0.02,
-                    size: 3 + Math.random() * 4,
+                    size: (3 + Math.random() * 4) * s,
                     color: Math.random() > 0.5 ? color : glow
                 });
             }
@@ -402,26 +446,28 @@
 
         function spawnDeflectParticles(x, y, element) {
             const color = ELEMENTS[element].glow;
+            const s = CELL_SIZE / 50; // Scale factor
             for (let i = 0; i < 8; i++) {
                 const angle = (Math.PI * 2 / 8) * i;
                 game.particles.push({
                     x, y,
-                    vx: Math.cos(angle) * 4,
-                    vy: Math.sin(angle) * 4,
+                    vx: Math.cos(angle) * 4 * s,
+                    vy: Math.sin(angle) * 4 * s,
                     life: 1,
                     decay: 0.04,
-                    size: 2 + Math.random() * 2,
+                    size: (2 + Math.random() * 2) * s,
                     color: color
                 });
             }
         }
 
         function updateParticles() {
+            const s = CELL_SIZE / 50; // Scale factor
             for (let i = game.particles.length - 1; i >= 0; i--) {
                 const p = game.particles[i];
                 p.x += p.vx;
                 p.y += p.vy;
-                p.vy += 0.1; // gravity
+                p.vy += 0.1 * s; // gravity
                 p.life -= p.decay;
                 if (p.life <= 0) {
                     game.particles.splice(i, 1);
@@ -445,9 +491,44 @@
         // ============================================
 
         const GRID_SIZE = 12;
-        const CELL_SIZE = 50;
+        let CELL_SIZE = 50;
         const BOARD_OFFSET_X = 0;
         const BOARD_OFFSET_Y = 0;
+
+        // Calculate optimal cell size based on viewport
+        function calculateCellSize() {
+            const padding = 16; // Account for body padding
+            const headerHeight = 80; // Approximate header height
+            const controlsHeight = 120; // Approximate controls/status height
+            const maxWidth = window.innerWidth - padding;
+            const maxHeight = window.innerHeight - headerHeight - controlsHeight - padding;
+            const maxBoardSize = Math.min(maxWidth, maxHeight, 600); // Cap at 600px max
+            const cellSize = Math.floor(maxBoardSize / GRID_SIZE);
+            // Minimum cell size of 25px to keep game playable
+            return Math.max(25, cellSize);
+        }
+
+        function resizeCanvas() {
+            CELL_SIZE = calculateCellSize();
+            const boardSize = CELL_SIZE * GRID_SIZE;
+            canvas.width = boardSize;
+            canvas.height = boardSize;
+
+            // Update wizard positions to match new cell size
+            for (const wizard of [...game.playerWizards, ...game.enemyWizards]) {
+                wizard.animX = wizard.col * CELL_SIZE + CELL_SIZE / 2;
+                wizard.animY = wizard.row * CELL_SIZE + CELL_SIZE / 2;
+                if (wizard.targetX !== null) {
+                    wizard.targetX = wizard.col * CELL_SIZE + CELL_SIZE / 2;
+                    wizard.targetY = wizard.row * CELL_SIZE + CELL_SIZE / 2;
+                }
+            }
+
+            // Also resize captured canvases
+            const capturedWidth = Math.min(250, (boardSize / 2) - 10);
+            playerCapturedCanvas.width = capturedWidth;
+            enemyCapturedCanvas.width = capturedWidth;
+        }
 
         // Element types with colors and advantages
         // Rock-paper-scissors: each element beats two others
@@ -510,15 +591,23 @@
                 skin: SKIN_TONES[Math.floor(Math.random() * SKIN_TONES.length)],
                 robe: ROBE_COLORS[Math.floor(Math.random() * ROBE_COLORS.length)],
                 hat: HAT_STYLES[Math.floor(Math.random() * HAT_STYLES.length)],
-                // Animation state
-                animX: col * CELL_SIZE + CELL_SIZE / 2,
-                animY: row * CELL_SIZE + CELL_SIZE / 2,
+                // Animation state - will be set properly after resize
+                animX: 0,
+                animY: 0,
                 targetX: null,
                 targetY: null,
                 isMoving: false,
                 isFleeing: false,
                 fleeDirection: 0
             };
+        }
+
+        // Update wizard positions after creation or resize
+        function updateWizardPositions() {
+            for (const wizard of [...game.playerWizards, ...game.enemyWizards]) {
+                wizard.animX = wizard.col * CELL_SIZE + CELL_SIZE / 2;
+                wizard.animY = wizard.row * CELL_SIZE + CELL_SIZE / 2;
+            }
         }
 
         function setupWizards() {
@@ -546,6 +635,9 @@
                     game.enemyWizards.push(createWizard(10, row, 'enemy', enemyElements[Math.floor(Math.random() * enemyElements.length)]));
                 }
             }
+
+            // Position wizards based on current cell size
+            updateWizardPositions();
         }
 
         // ============================================
@@ -938,33 +1030,36 @@
             let y = Math.floor(wizard.animY);
             const element = ELEMENTS[wizard.element];
 
+            // Scale factor based on cell size (designed for 50px cells)
+            const s = CELL_SIZE / 50;
+
             // Emote animation - bounce and sparkle
             const isEmoting = game.emoteWizard === wizard;
             let emoteOffset = 0;
             if (isEmoting) {
-                emoteOffset = Math.sin(game.emoteTimer * 0.5) * 5;
+                emoteOffset = Math.sin(game.emoteTimer * 0.5) * 5 * s;
                 y -= Math.abs(emoteOffset);
 
                 // Sparkles around wizard
                 if (game.emoteTimer % 5 === 0) {
                     const sparkleAngle = Math.random() * Math.PI * 2;
-                    const sparkleX = x + Math.cos(sparkleAngle) * 25;
-                    const sparkleY = y + Math.sin(sparkleAngle) * 25;
+                    const sparkleX = x + Math.cos(sparkleAngle) * 25 * s;
+                    const sparkleY = y + Math.sin(sparkleAngle) * 25 * s;
                     game.particles.push({
                         x: sparkleX, y: sparkleY,
-                        vx: Math.cos(sparkleAngle) * 0.5,
-                        vy: -1,
+                        vx: Math.cos(sparkleAngle) * 0.5 * s,
+                        vy: -1 * s,
                         life: 1,
                         decay: 0.05,
-                        size: 3,
+                        size: 3 * s,
                         color: element.glow
                     });
                 }
             }
 
             // Glow effect (bigger when emoting)
-            const glowSize = isEmoting ? 28 : 22;
-            const gradient = ctx.createRadialGradient(x, y, 5, x, y, glowSize);
+            const glowSize = (isEmoting ? 28 : 22) * s;
+            const gradient = ctx.createRadialGradient(x, y, 5 * s, x, y, glowSize);
             gradient.addColorStop(0, element.glow + (isEmoting ? '90' : '60'));
             gradient.addColorStop(1, 'transparent');
             ctx.fillStyle = gradient;
@@ -975,63 +1070,63 @@
             // Robe (body)
             ctx.fillStyle = wizard.robe;
             ctx.beginPath();
-            ctx.moveTo(x - 10, y + 18);
-            ctx.lineTo(x - 6, y - 2);
-            ctx.lineTo(x + 6, y - 2);
-            ctx.lineTo(x + 10, y + 18);
+            ctx.moveTo(x - 10 * s, y + 18 * s);
+            ctx.lineTo(x - 6 * s, y - 2 * s);
+            ctx.lineTo(x + 6 * s, y - 2 * s);
+            ctx.lineTo(x + 10 * s, y + 18 * s);
             ctx.closePath();
             ctx.fill();
 
             // Robe trim
             ctx.fillStyle = element.color;
-            ctx.fillRect(x - 10, y + 14, 20, 4);
+            ctx.fillRect(x - 10 * s, y + 14 * s, 20 * s, 4 * s);
 
             // Head
             ctx.fillStyle = wizard.skin;
             ctx.beginPath();
-            ctx.arc(x, y - 8, 7, 0, Math.PI * 2);
+            ctx.arc(x, y - 8 * s, 7 * s, 0, Math.PI * 2);
             ctx.fill();
 
             // Eyes
             ctx.fillStyle = '#202020';
-            ctx.fillRect(x - 4, y - 9, 2, 2);
-            ctx.fillRect(x + 2, y - 9, 2, 2);
+            ctx.fillRect(x - 4 * s, y - 9 * s, 2 * s, 2 * s);
+            ctx.fillRect(x + 2 * s, y - 9 * s, 2 * s, 2 * s);
 
             // Hat
             if (wizard.hat === 'pointy') {
                 ctx.fillStyle = wizard.robe;
                 ctx.beginPath();
-                ctx.moveTo(x - 8, y - 13);
-                ctx.lineTo(x, y - 28);
-                ctx.lineTo(x + 8, y - 13);
+                ctx.moveTo(x - 8 * s, y - 13 * s);
+                ctx.lineTo(x, y - 28 * s);
+                ctx.lineTo(x + 8 * s, y - 13 * s);
                 ctx.closePath();
                 ctx.fill();
                 // Hat band
                 ctx.fillStyle = element.color;
-                ctx.fillRect(x - 8, y - 15, 16, 3);
+                ctx.fillRect(x - 8 * s, y - 15 * s, 16 * s, 3 * s);
             } else if (wizard.hat === 'wide') {
                 ctx.fillStyle = wizard.robe;
                 // Brim
                 ctx.beginPath();
-                ctx.ellipse(x, y - 14, 14, 4, 0, 0, Math.PI * 2);
+                ctx.ellipse(x, y - 14 * s, 14 * s, 4 * s, 0, 0, Math.PI * 2);
                 ctx.fill();
                 // Crown
                 ctx.beginPath();
-                ctx.moveTo(x - 6, y - 14);
-                ctx.lineTo(x - 4, y - 22);
-                ctx.lineTo(x + 4, y - 22);
-                ctx.lineTo(x + 6, y - 14);
+                ctx.moveTo(x - 6 * s, y - 14 * s);
+                ctx.lineTo(x - 4 * s, y - 22 * s);
+                ctx.lineTo(x + 4 * s, y - 22 * s);
+                ctx.lineTo(x + 6 * s, y - 14 * s);
                 ctx.closePath();
                 ctx.fill();
                 // Band
                 ctx.fillStyle = element.color;
-                ctx.fillRect(x - 5, y - 17, 10, 2);
+                ctx.fillRect(x - 5 * s, y - 17 * s, 10 * s, 2 * s);
             } else if (wizard.hat === 'hood') {
                 ctx.fillStyle = wizard.robe;
                 ctx.beginPath();
-                ctx.arc(x, y - 8, 10, Math.PI, 0, false);
-                ctx.lineTo(x + 8, y - 2);
-                ctx.lineTo(x - 8, y - 2);
+                ctx.arc(x, y - 8 * s, 10 * s, Math.PI, 0, false);
+                ctx.lineTo(x + 8 * s, y - 2 * s);
+                ctx.lineTo(x - 8 * s, y - 2 * s);
                 ctx.closePath();
                 ctx.fill();
             }
@@ -1041,9 +1136,9 @@
             ctx.fillStyle = element.color;
             ctx.beginPath();
             ctx.moveTo(x, y);
-            ctx.lineTo(x - 3, y + 5);
-            ctx.lineTo(x, y + 10);
-            ctx.lineTo(x + 3, y + 5);
+            ctx.lineTo(x - 3 * s, y + 5 * s);
+            ctx.lineTo(x, y + 10 * s);
+            ctx.lineTo(x + 3 * s, y + 5 * s);
             ctx.closePath();
             ctx.fill();
 
@@ -1053,48 +1148,49 @@
             } else {
                 ctx.strokeStyle = 'rgba(224, 112, 80, 0.6)';
             }
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 2 * s;
             ctx.beginPath();
-            ctx.arc(x, y, 20, 0, Math.PI * 2);
+            ctx.arc(x, y, 20 * s, 0, Math.PI * 2);
             ctx.stroke();
         }
 
         function drawCapturedWizards(capturedCtx, captured) {
+            const canvasWidth = capturedCtx.canvas.width;
             capturedCtx.fillStyle = 'rgba(0, 0, 0, 0)';
-            capturedCtx.clearRect(0, 0, 250, 40);
+            capturedCtx.clearRect(0, 0, canvasWidth, 40);
+
+            // Scale captured icons based on available space
+            const iconSpacing = Math.min(25, canvasWidth / Math.max(captured.length + 1, 10));
+            const scale = Math.min(1, iconSpacing / 25);
 
             for (let i = 0; i < captured.length; i++) {
                 const wizard = captured[i];
-                const x = 15 + i * 25;
+                const x = 15 * scale + i * iconSpacing;
                 const y = 20;
                 const element = ELEMENTS[wizard.element];
 
                 // Small wizard representation
-                ctx.save();
-
                 // Robe
                 capturedCtx.fillStyle = wizard.robe;
                 capturedCtx.beginPath();
-                capturedCtx.moveTo(x - 5, y + 10);
-                capturedCtx.lineTo(x - 3, y - 2);
-                capturedCtx.lineTo(x + 3, y - 2);
-                capturedCtx.lineTo(x + 5, y + 10);
+                capturedCtx.moveTo(x - 5 * scale, y + 10 * scale);
+                capturedCtx.lineTo(x - 3 * scale, y - 2 * scale);
+                capturedCtx.lineTo(x + 3 * scale, y - 2 * scale);
+                capturedCtx.lineTo(x + 5 * scale, y + 10 * scale);
                 capturedCtx.closePath();
                 capturedCtx.fill();
 
                 // Head
                 capturedCtx.fillStyle = wizard.skin;
                 capturedCtx.beginPath();
-                capturedCtx.arc(x, y - 5, 4, 0, Math.PI * 2);
+                capturedCtx.arc(x, y - 5 * scale, 4 * scale, 0, Math.PI * 2);
                 capturedCtx.fill();
 
                 // Element gem
                 capturedCtx.fillStyle = element.color;
                 capturedCtx.beginPath();
-                capturedCtx.arc(x, y + 3, 2, 0, Math.PI * 2);
+                capturedCtx.arc(x, y + 3 * scale, 2 * scale, 0, Math.PI * 2);
                 capturedCtx.fill();
-
-                ctx.restore();
             }
         }
 
@@ -1131,9 +1227,10 @@
             }
 
             // Update fleeing wizards
+            const s = CELL_SIZE / 50; // Scale factor
             for (const wizard of [...game.playerCaptured, ...game.enemyCaptured]) {
                 if (wizard.isFleeing) {
-                    wizard.animX += wizard.fleeDirection * 8;
+                    wizard.animX += wizard.fleeDirection * 8 * s;
                 }
             }
 
@@ -1174,8 +1271,15 @@
 
             document.getElementById('audio-init').classList.add('hidden');
 
+            // Set up responsive canvas before creating wizards
+            resizeCanvas();
             setupWizards();
             setupInput();
+
+            // Listen for window resize
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+            });
 
             game.currentTurn = 'player';
             game.gameOver = false;
@@ -1187,6 +1291,7 @@
         }
 
         function resetGame() {
+            resizeCanvas(); // Recalculate cell size for current viewport
             setupWizards();
             game.currentTurn = 'player';
             game.gameOver = false;
