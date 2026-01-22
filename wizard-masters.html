@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WIZARD MASTERS</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Cormorant+Garamond:wght@400;600&display=swap');
+
+        :root {
+            --void: #0a0a0f;
+            --earth-deep: #1a1612;
+            --earth-warm: #2d2620;
+            --board-light: #c9b896;
+            --board-dark: #8b7355;
+            --text-dim: #6b635a;
+            --text-mid: #9a938a;
+            --text-bright: #d4cdc0;
+            --accent-fire: #e07050;
+            --accent-water: #5080b0;
+            --accent-earth: #70a060;
+            --accent-air: #a0a0c0;
+            --accent-electric: #d0c050;
+            --accent-cosmic: #a070c0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'IBM Plex Mono', monospace;
+            background: linear-gradient(180deg, var(--void) 0%, var(--earth-deep) 100%);
+            color: var(--text-bright);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            overflow-x: hidden;
+        }
+
+        .container {
+            position: relative;
+            text-align: center;
+        }
+
+        header {
+            margin-bottom: 1rem;
+            animation: fadeIn 1.5s ease-out;
+        }
+
+        h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            font-weight: 400;
+            letter-spacing: 0.4rem;
+            text-transform: uppercase;
+            color: var(--text-bright);
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: clamp(0.65rem, 1.5vw, 0.8rem);
+            color: var(--text-dim);
+            letter-spacing: 0.25rem;
+            text-transform: lowercase;
+            font-style: italic;
+        }
+
+        #game-container {
+            background: var(--earth-warm);
+            border: 1px solid #3d3832;
+            padding: 0;
+            border-radius: 2px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 1.5s ease-out 0.3s both;
+            display: inline-block;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #game-canvas {
+            display: block;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        .status {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: var(--text-mid);
+            letter-spacing: 0.15rem;
+        }
+
+        .status.player-turn {
+            color: var(--accent-water);
+        }
+
+        .status.enemy-turn {
+            color: var(--accent-fire);
+        }
+
+        .controls {
+            margin-top: 1rem;
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.8rem;
+            padding: 0.6rem 1.5rem;
+            background: transparent;
+            border: 1px solid var(--text-dim);
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: all 0.5s ease;
+            text-transform: lowercase;
+            letter-spacing: 0.15rem;
+        }
+
+        button:hover,
+        button:focus {
+            background: var(--text-dim);
+            color: var(--earth-deep);
+            outline: none;
+        }
+
+        .instructions {
+            margin-top: 0.75rem;
+            font-size: clamp(0.6rem, 1.3vw, 0.75rem);
+            color: var(--text-dim);
+            letter-spacing: 0.1rem;
+            font-style: italic;
+        }
+
+        /* Captured wizards display */
+        .captured-area {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1rem;
+            gap: 2rem;
+        }
+
+        .captured-side {
+            flex: 1;
+            min-height: 50px;
+            padding: 0.5rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 2px;
+        }
+
+        .captured-label {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            margin-bottom: 0.3rem;
+            text-transform: lowercase;
+            letter-spacing: 0.1rem;
+        }
+
+        /* Audio init overlay */
+        #audio-init {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--void);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            transition: opacity 1s ease;
+        }
+
+        #audio-init.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .init-content {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .init-content h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            font-weight: 400;
+            letter-spacing: 0.3rem;
+            color: var(--text-bright);
+            margin-bottom: 1rem;
+        }
+
+        .init-content p {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            margin-bottom: 1.5rem;
+            font-style: italic;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Audio init overlay -->
+    <div id="audio-init">
+        <div class="init-content">
+            <h2>Wizard Masters</h2>
+            <p>elemental wizards clash on the shifting board</p>
+            <button id="init-btn" onclick="initGame()" autofocus>begin</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Wizard Masters</h1>
+            <div class="subtitle">elemental tactics</div>
+        </header>
+
+        <div id="game-container">
+            <canvas id="game-canvas" width="600" height="600"></canvas>
+        </div>
+
+        <div id="status" class="status player-turn">your move</div>
+
+        <div class="controls">
+            <button onclick="resetGame()">new game</button>
+        </div>
+
+        <div class="instructions">drag wizards to move one square in any direction</div>
+
+        <div class="captured-area">
+            <div class="captured-side" id="player-captured">
+                <div class="captured-label">your fallen</div>
+                <canvas id="player-captured-canvas" width="250" height="40"></canvas>
+            </div>
+            <div class="captured-side" id="enemy-captured">
+                <div class="captured-label">enemy fallen</div>
+                <canvas id="enemy-captured-canvas" width="250" height="40"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio -->
+    <audio id="music" loop>
+        <source src="music/wizard-masters.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // ============================================
+        // ROOK'S GAMBIT - Elemental Wizard Tactics
+        // ============================================
+
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const playerCapturedCanvas = document.getElementById('player-captured-canvas');
+        const playerCapturedCtx = playerCapturedCanvas.getContext('2d');
+        const enemyCapturedCanvas = document.getElementById('enemy-captured-canvas');
+        const enemyCapturedCtx = enemyCapturedCanvas.getContext('2d');
+        const music = document.getElementById('music');
+        const statusEl = document.getElementById('status');
+
+        // ============================================
+        // AUDIO SYSTEM
+        // ============================================
+
+        let audioContext = null;
+
+        function initAudio() {
+            if (audioContext) return;
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        function playMove() {
+            if (!audioContext) return;
+            const now = audioContext.currentTime;
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(330, now);
+            osc.frequency.linearRampToValueAtTime(440, now + 0.08);
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.linearRampToValueAtTime(0.001, now + 0.15);
+            osc.start(now);
+            osc.stop(now + 0.2);
+        }
+
+        function playCapture() {
+            if (!audioContext) return;
+            const now = audioContext.currentTime;
+
+            // Impact sound
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(200, now);
+            osc.frequency.linearRampToValueAtTime(80, now + 0.15);
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.linearRampToValueAtTime(0.001, now + 0.2);
+            osc.start(now);
+            osc.stop(now + 0.25);
+
+            // Chime
+            const osc2 = audioContext.createOscillator();
+            const gain2 = audioContext.createGain();
+            osc2.connect(gain2);
+            gain2.connect(audioContext.destination);
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(523, now + 0.1);
+            gain2.gain.setValueAtTime(0.1, now + 0.1);
+            gain2.gain.linearRampToValueAtTime(0.001, now + 0.4);
+            osc2.start(now + 0.1);
+            osc2.stop(now + 0.5);
+        }
+
+        function playVictory() {
+            if (!audioContext) return;
+            const now = audioContext.currentTime;
+            const notes = [523, 659, 784, 1047];
+            notes.forEach((freq, i) => {
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now + i * 0.15);
+                gain.gain.setValueAtTime(0.12, now + i * 0.15);
+                gain.gain.linearRampToValueAtTime(0.001, now + i * 0.15 + 0.3);
+                osc.start(now + i * 0.15);
+                osc.stop(now + i * 0.15 + 0.4);
+            });
+        }
+
+        // ============================================
+        // GAME STATE
+        // ============================================
+
+        const GRID_SIZE = 12;
+        const CELL_SIZE = 50;
+        const BOARD_OFFSET_X = 0;
+        const BOARD_OFFSET_Y = 0;
+
+        // Element types with colors
+        const ELEMENTS = {
+            fire: { color: '#e07050', glow: '#ff9070' },
+            water: { color: '#5080b0', glow: '#70a0d0' },
+            earth: { color: '#70a060', glow: '#90c080' },
+            air: { color: '#a0a0c0', glow: '#c0c0e0' },
+            electric: { color: '#d0c050', glow: '#f0e070' },
+            cosmic: { color: '#a070c0', glow: '#c090e0' }
+        };
+
+        // Wizard appearance variants
+        const SKIN_TONES = ['#e8c4a0', '#c49070', '#8b6040', '#d4a878', '#f0d0b0', '#a07050'];
+        const ROBE_COLORS = ['#4a3a60', '#3a4a60', '#604a3a', '#3a6050', '#605050', '#504060'];
+        const HAT_STYLES = ['pointy', 'wide', 'none', 'hood'];
+
+        const game = {
+            board: [],
+            playerWizards: [],
+            enemyWizards: [],
+            playerCaptured: [],
+            enemyCaptured: [],
+            currentTurn: 'player',
+            selectedWizard: null,
+            dragging: null,
+            dragOffset: { x: 0, y: 0 },
+            animatingWizard: null,
+            animationProgress: 0,
+            gameOver: false,
+            winner: null
+        };
+
+        // ============================================
+        // WIZARD CREATION
+        // ============================================
+
+        function createWizard(col, row, team, element) {
+            const elementKeys = Object.keys(ELEMENTS);
+            const actualElement = element || elementKeys[Math.floor(Math.random() * elementKeys.length)];
+
+            return {
+                id: Math.random().toString(36).substr(2, 9),
+                col,
+                row,
+                team, // 'player' or 'enemy'
+                element: actualElement,
+                skin: SKIN_TONES[Math.floor(Math.random() * SKIN_TONES.length)],
+                robe: ROBE_COLORS[Math.floor(Math.random() * ROBE_COLORS.length)],
+                hat: HAT_STYLES[Math.floor(Math.random() * HAT_STYLES.length)],
+                // Animation state
+                animX: col * CELL_SIZE + CELL_SIZE / 2,
+                animY: row * CELL_SIZE + CELL_SIZE / 2,
+                targetX: null,
+                targetY: null,
+                isMoving: false,
+                isFleeing: false,
+                fleeDirection: 0
+            };
+        }
+
+        function setupWizards() {
+            game.playerWizards = [];
+            game.enemyWizards = [];
+            game.playerCaptured = [];
+            game.enemyCaptured = [];
+
+            // Player wizards on left (columns 0-1)
+            const playerElements = ['fire', 'water', 'earth', 'air', 'electric', 'cosmic'];
+            for (let row = 2; row < 10; row++) {
+                const element = playerElements[(row - 2) % playerElements.length];
+                game.playerWizards.push(createWizard(0, row, 'player', element));
+                if (row % 2 === 0) {
+                    game.playerWizards.push(createWizard(1, row, 'player', playerElements[Math.floor(Math.random() * playerElements.length)]));
+                }
+            }
+
+            // Enemy wizards on right (columns 10-11)
+            const enemyElements = ['fire', 'water', 'earth', 'air', 'electric', 'cosmic'];
+            for (let row = 2; row < 10; row++) {
+                const element = enemyElements[(row - 2) % enemyElements.length];
+                game.enemyWizards.push(createWizard(11, row, 'enemy', element));
+                if (row % 2 === 0) {
+                    game.enemyWizards.push(createWizard(10, row, 'enemy', enemyElements[Math.floor(Math.random() * enemyElements.length)]));
+                }
+            }
+        }
+
+        // ============================================
+        // GAME LOGIC
+        // ============================================
+
+        function getWizardAt(col, row) {
+            const allWizards = [...game.playerWizards, ...game.enemyWizards];
+            return allWizards.find(w => w.col === col && w.row === row && !w.isFleeing);
+        }
+
+        function isValidMove(wizard, toCol, toRow) {
+            // Must be within bounds
+            if (toCol < 0 || toCol >= GRID_SIZE || toRow < 0 || toRow >= GRID_SIZE) return false;
+
+            // Must move exactly one square in any direction
+            const colDiff = Math.abs(toCol - wizard.col);
+            const rowDiff = Math.abs(toRow - wizard.row);
+            if (colDiff > 1 || rowDiff > 1) return false;
+            if (colDiff === 0 && rowDiff === 0) return false;
+
+            // Can't move onto friendly wizard
+            const targetWizard = getWizardAt(toCol, toRow);
+            if (targetWizard && targetWizard.team === wizard.team) return false;
+
+            return true;
+        }
+
+        function moveWizard(wizard, toCol, toRow) {
+            const targetWizard = getWizardAt(toCol, toRow);
+
+            // Start move animation
+            wizard.targetX = toCol * CELL_SIZE + CELL_SIZE / 2;
+            wizard.targetY = toRow * CELL_SIZE + CELL_SIZE / 2;
+            wizard.isMoving = true;
+            game.animatingWizard = wizard;
+
+            // If capturing
+            if (targetWizard) {
+                // Make captured wizard flee
+                targetWizard.isFleeing = true;
+                targetWizard.fleeDirection = targetWizard.team === 'player' ? -1 : 1;
+
+                // Add to captured list
+                if (targetWizard.team === 'player') {
+                    game.playerCaptured.push(targetWizard);
+                    game.playerWizards = game.playerWizards.filter(w => w.id !== targetWizard.id);
+                } else {
+                    game.enemyCaptured.push(targetWizard);
+                    game.enemyWizards = game.enemyWizards.filter(w => w.id !== targetWizard.id);
+                }
+
+                playCapture();
+            } else {
+                playMove();
+            }
+
+            // Update position (actual position updates after animation)
+            wizard.col = toCol;
+            wizard.row = toRow;
+        }
+
+        function checkVictory() {
+            if (game.playerWizards.length === 0) {
+                game.gameOver = true;
+                game.winner = 'enemy';
+                statusEl.textContent = 'defeat...';
+                statusEl.className = 'status enemy-turn';
+                return true;
+            }
+            if (game.enemyWizards.length === 0) {
+                game.gameOver = true;
+                game.winner = 'player';
+                statusEl.textContent = 'victory!';
+                statusEl.className = 'status player-turn';
+                playVictory();
+                return true;
+            }
+            return false;
+        }
+
+        function switchTurn() {
+            if (game.gameOver) return;
+
+            game.currentTurn = game.currentTurn === 'player' ? 'enemy' : 'player';
+
+            if (game.currentTurn === 'player') {
+                statusEl.textContent = 'your move';
+                statusEl.className = 'status player-turn';
+            } else {
+                statusEl.textContent = 'enemy thinking...';
+                statusEl.className = 'status enemy-turn';
+                setTimeout(enemyTurn, 800);
+            }
+        }
+
+        // ============================================
+        // AI
+        // ============================================
+
+        function enemyTurn() {
+            if (game.gameOver || game.currentTurn !== 'enemy') return;
+
+            const validMoves = [];
+
+            for (const wizard of game.enemyWizards) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    for (let dr = -1; dr <= 1; dr++) {
+                        if (dc === 0 && dr === 0) continue;
+                        const toCol = wizard.col + dc;
+                        const toRow = wizard.row + dr;
+                        if (isValidMove(wizard, toCol, toRow)) {
+                            const targetWizard = getWizardAt(toCol, toRow);
+                            validMoves.push({
+                                wizard,
+                                toCol,
+                                toRow,
+                                isCapture: !!targetWizard,
+                                // Prefer captures and moving toward player
+                                score: (targetWizard ? 100 : 0) + (wizard.col - toCol) * 5 + Math.random() * 10
+                            });
+                        }
+                    }
+                }
+            }
+
+            if (validMoves.length === 0) {
+                // No valid moves - skip turn
+                switchTurn();
+                return;
+            }
+
+            // Sort by score and pick best move
+            validMoves.sort((a, b) => b.score - a.score);
+            const move = validMoves[0];
+
+            moveWizard(move.wizard, move.toCol, move.toRow);
+        }
+
+        // ============================================
+        // INPUT
+        // ============================================
+
+        function setupInput() {
+            canvas.addEventListener('mousedown', startDrag);
+            canvas.addEventListener('mousemove', doDrag);
+            canvas.addEventListener('mouseup', endDrag);
+            canvas.addEventListener('mouseleave', endDrag);
+
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                startDrag(touchToMouse(touch));
+            });
+
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                doDrag(touchToMouse(touch));
+            });
+
+            canvas.addEventListener('touchend', endDrag);
+        }
+
+        function touchToMouse(touch) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return {
+                clientX: touch.clientX,
+                clientY: touch.clientY,
+                rect, scaleX, scaleY
+            };
+        }
+
+        function getCanvasPos(e) {
+            const rect = e.rect || canvas.getBoundingClientRect();
+            const scaleX = e.scaleX || canvas.width / rect.width;
+            const scaleY = e.scaleY || canvas.height / rect.height;
+            return {
+                x: (e.clientX - rect.left) * scaleX,
+                y: (e.clientY - rect.top) * scaleY
+            };
+        }
+
+        function startDrag(e) {
+            if (game.currentTurn !== 'player' || game.gameOver || game.animatingWizard) return;
+
+            const pos = getCanvasPos(e);
+            const col = Math.floor(pos.x / CELL_SIZE);
+            const row = Math.floor(pos.y / CELL_SIZE);
+
+            const wizard = game.playerWizards.find(w => w.col === col && w.row === row);
+            if (wizard) {
+                game.dragging = wizard;
+                game.dragOffset = {
+                    x: pos.x - wizard.animX,
+                    y: pos.y - wizard.animY
+                };
+                game.selectedWizard = wizard;
+            }
+        }
+
+        function doDrag(e) {
+            if (!game.dragging) return;
+            const pos = getCanvasPos(e);
+            game.dragging.animX = pos.x - game.dragOffset.x;
+            game.dragging.animY = pos.y - game.dragOffset.y;
+        }
+
+        function endDrag(e) {
+            if (!game.dragging) return;
+
+            const wizard = game.dragging;
+            const toCol = Math.floor(wizard.animX / CELL_SIZE);
+            const toRow = Math.floor(wizard.animY / CELL_SIZE);
+
+            if (isValidMove(wizard, toCol, toRow)) {
+                moveWizard(wizard, toCol, toRow);
+            } else {
+                // Snap back
+                wizard.animX = wizard.col * CELL_SIZE + CELL_SIZE / 2;
+                wizard.animY = wizard.row * CELL_SIZE + CELL_SIZE / 2;
+            }
+
+            game.dragging = null;
+            game.selectedWizard = null;
+        }
+
+        // ============================================
+        // RENDERING
+        // ============================================
+
+        function render() {
+            ctx.fillStyle = '#1a1612';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            drawBoard();
+            drawValidMoves();
+            drawWizards();
+
+            // Draw captured wizards
+            drawCapturedWizards(playerCapturedCtx, game.playerCaptured);
+            drawCapturedWizards(enemyCapturedCtx, game.enemyCaptured);
+        }
+
+        function drawBoard() {
+            for (let row = 0; row < GRID_SIZE; row++) {
+                for (let col = 0; col < GRID_SIZE; col++) {
+                    const isLight = (row + col) % 2 === 0;
+                    ctx.fillStyle = isLight ? '#c9b896' : '#8b7355';
+                    ctx.fillRect(
+                        col * CELL_SIZE,
+                        row * CELL_SIZE,
+                        CELL_SIZE,
+                        CELL_SIZE
+                    );
+                }
+            }
+
+            // Board border
+            ctx.strokeStyle = '#3d3832';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(0, 0, GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
+        }
+
+        function drawValidMoves() {
+            if (!game.selectedWizard || game.currentTurn !== 'player') return;
+
+            const wizard = game.selectedWizard;
+            ctx.fillStyle = 'rgba(80, 128, 176, 0.4)';
+
+            for (let dc = -1; dc <= 1; dc++) {
+                for (let dr = -1; dr <= 1; dr++) {
+                    if (dc === 0 && dr === 0) continue;
+                    const toCol = wizard.col + dc;
+                    const toRow = wizard.row + dr;
+                    if (isValidMove(wizard, toCol, toRow)) {
+                        const targetWizard = getWizardAt(toCol, toRow);
+                        ctx.fillStyle = targetWizard ? 'rgba(224, 112, 80, 0.4)' : 'rgba(80, 128, 176, 0.4)';
+                        ctx.fillRect(toCol * CELL_SIZE, toRow * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                    }
+                }
+            }
+        }
+
+        function drawWizards() {
+            const allWizards = [...game.enemyWizards, ...game.playerWizards];
+
+            for (const wizard of allWizards) {
+                if (wizard === game.dragging) continue; // Draw dragged wizard last
+                drawWizard(wizard);
+            }
+
+            // Draw dragged wizard on top
+            if (game.dragging) {
+                drawWizard(game.dragging);
+            }
+        }
+
+        function drawWizard(wizard) {
+            const x = Math.floor(wizard.animX);
+            const y = Math.floor(wizard.animY);
+            const element = ELEMENTS[wizard.element];
+
+            // Glow effect
+            const gradient = ctx.createRadialGradient(x, y, 5, x, y, 22);
+            gradient.addColorStop(0, element.glow + '60');
+            gradient.addColorStop(1, 'transparent');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(x, y, 22, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Robe (body)
+            ctx.fillStyle = wizard.robe;
+            ctx.beginPath();
+            ctx.moveTo(x - 10, y + 18);
+            ctx.lineTo(x - 6, y - 2);
+            ctx.lineTo(x + 6, y - 2);
+            ctx.lineTo(x + 10, y + 18);
+            ctx.closePath();
+            ctx.fill();
+
+            // Robe trim
+            ctx.fillStyle = element.color;
+            ctx.fillRect(x - 10, y + 14, 20, 4);
+
+            // Head
+            ctx.fillStyle = wizard.skin;
+            ctx.beginPath();
+            ctx.arc(x, y - 8, 7, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eyes
+            ctx.fillStyle = '#202020';
+            ctx.fillRect(x - 4, y - 9, 2, 2);
+            ctx.fillRect(x + 2, y - 9, 2, 2);
+
+            // Hat
+            if (wizard.hat === 'pointy') {
+                ctx.fillStyle = wizard.robe;
+                ctx.beginPath();
+                ctx.moveTo(x - 8, y - 13);
+                ctx.lineTo(x, y - 28);
+                ctx.lineTo(x + 8, y - 13);
+                ctx.closePath();
+                ctx.fill();
+                // Hat band
+                ctx.fillStyle = element.color;
+                ctx.fillRect(x - 8, y - 15, 16, 3);
+            } else if (wizard.hat === 'wide') {
+                ctx.fillStyle = wizard.robe;
+                // Brim
+                ctx.beginPath();
+                ctx.ellipse(x, y - 14, 14, 4, 0, 0, Math.PI * 2);
+                ctx.fill();
+                // Crown
+                ctx.beginPath();
+                ctx.moveTo(x - 6, y - 14);
+                ctx.lineTo(x - 4, y - 22);
+                ctx.lineTo(x + 4, y - 22);
+                ctx.lineTo(x + 6, y - 14);
+                ctx.closePath();
+                ctx.fill();
+                // Band
+                ctx.fillStyle = element.color;
+                ctx.fillRect(x - 5, y - 17, 10, 2);
+            } else if (wizard.hat === 'hood') {
+                ctx.fillStyle = wizard.robe;
+                ctx.beginPath();
+                ctx.arc(x, y - 8, 10, Math.PI, 0, false);
+                ctx.lineTo(x + 8, y - 2);
+                ctx.lineTo(x - 8, y - 2);
+                ctx.closePath();
+                ctx.fill();
+            }
+            // 'none' - no hat
+
+            // Element indicator (small gem on chest)
+            ctx.fillStyle = element.color;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x - 3, y + 5);
+            ctx.lineTo(x, y + 10);
+            ctx.lineTo(x + 3, y + 5);
+            ctx.closePath();
+            ctx.fill();
+
+            // Team indicator (subtle border)
+            if (wizard.team === 'player') {
+                ctx.strokeStyle = 'rgba(80, 128, 176, 0.6)';
+            } else {
+                ctx.strokeStyle = 'rgba(224, 112, 80, 0.6)';
+            }
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(x, y, 20, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        function drawCapturedWizards(capturedCtx, captured) {
+            capturedCtx.fillStyle = 'rgba(0, 0, 0, 0)';
+            capturedCtx.clearRect(0, 0, 250, 40);
+
+            for (let i = 0; i < captured.length; i++) {
+                const wizard = captured[i];
+                const x = 15 + i * 25;
+                const y = 20;
+                const element = ELEMENTS[wizard.element];
+
+                // Small wizard representation
+                ctx.save();
+
+                // Robe
+                capturedCtx.fillStyle = wizard.robe;
+                capturedCtx.beginPath();
+                capturedCtx.moveTo(x - 5, y + 10);
+                capturedCtx.lineTo(x - 3, y - 2);
+                capturedCtx.lineTo(x + 3, y - 2);
+                capturedCtx.lineTo(x + 5, y + 10);
+                capturedCtx.closePath();
+                capturedCtx.fill();
+
+                // Head
+                capturedCtx.fillStyle = wizard.skin;
+                capturedCtx.beginPath();
+                capturedCtx.arc(x, y - 5, 4, 0, Math.PI * 2);
+                capturedCtx.fill();
+
+                // Element gem
+                capturedCtx.fillStyle = element.color;
+                capturedCtx.beginPath();
+                capturedCtx.arc(x, y + 3, 2, 0, Math.PI * 2);
+                capturedCtx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        // ============================================
+        // ANIMATION LOOP
+        // ============================================
+
+        function update() {
+            // Update moving wizard animation
+            if (game.animatingWizard && game.animatingWizard.isMoving) {
+                const wizard = game.animatingWizard;
+                const dx = wizard.targetX - wizard.animX;
+                const dy = wizard.targetY - wizard.animY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < 2) {
+                    // Animation complete
+                    wizard.animX = wizard.targetX;
+                    wizard.animY = wizard.targetY;
+                    wizard.isMoving = false;
+                    wizard.targetX = null;
+                    wizard.targetY = null;
+                    game.animatingWizard = null;
+
+                    // Check victory and switch turn
+                    if (!checkVictory()) {
+                        switchTurn();
+                    }
+                } else {
+                    // Ease toward target
+                    wizard.animX += dx * 0.2;
+                    wizard.animY += dy * 0.2;
+                }
+            }
+
+            // Update fleeing wizards
+            for (const wizard of [...game.playerCaptured, ...game.enemyCaptured]) {
+                if (wizard.isFleeing) {
+                    wizard.animX += wizard.fleeDirection * 8;
+                }
+            }
+        }
+
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+
+        function initGame() {
+            initAudio();
+            music.volume = 0.3;
+            music.play().catch(err => console.log('Audio error:', err));
+
+            document.getElementById('audio-init').classList.add('hidden');
+
+            setupWizards();
+            setupInput();
+
+            game.currentTurn = 'player';
+            game.gameOver = false;
+            game.winner = null;
+            statusEl.textContent = 'your move';
+            statusEl.className = 'status player-turn';
+
+            gameLoop();
+        }
+
+        function resetGame() {
+            setupWizards();
+            game.currentTurn = 'player';
+            game.gameOver = false;
+            game.winner = null;
+            game.selectedWizard = null;
+            game.dragging = null;
+            game.animatingWizard = null;
+            statusEl.textContent = 'your move';
+            statusEl.className = 'status player-turn';
+        }
+
+        // Keyboard support for init
+        document.addEventListener('keydown', (e) => {
+            const audioInitActive = !document.getElementById('audio-init').classList.contains('hidden');
+            if (audioInitActive && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                initGame();
+            }
+        });
+    </script>
+</body>
+</html>
