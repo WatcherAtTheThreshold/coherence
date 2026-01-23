@@ -268,6 +268,17 @@ The enemy AI:
 - **Scorch Marks**: Captures leave fading elemental marks on the board
 - **Particles**: Capture explosions and deflection effects
 - **Wizard Variety**: Random skin tones, robe colors, and hat styles
+- **Idle Breathing**: Wizards gently bob when at rest
+- **Selection Pulse**: Selected wizard glows with a pulsing ring
+- **Element-Specific Auras**:
+  - Fire: Flickering heat shimmer
+  - Air: Orbiting wind arcs
+  - Earth: Weighted glow at feet
+  - Electric: Jittery static with occasional sparks
+  - Water: Gentle ripple rings
+  - Cosmic: Twinkling star particles
+- **Ambient Dust**: Floating motes drift across the board
+- **Turn Indicator**: Board edge glows in your team color
 
 ### Strategy Tips
 - Check elemental matchups before attacking (watch the highlight colors)
