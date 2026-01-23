@@ -222,10 +222,11 @@ Command elemental wizards on a tactical board. Move, capture, outlast. Simple ru
 ### Rules
 
 **The Board**:
-- 12x12 grid (responsive to screen size)
+- 11x11 grid (responsive to screen size, scales up on larger displays)
 - Player wizards start on the left (columns 0-1)
-- Enemy wizards start on the right (columns 10-11)
-- Each side has ~12 wizards
+- Enemy wizards start on the right (columns 9-10)
+- Each side has ~14 wizards
+- Defeated wizards walk off the board to their respective sides
 
 **Movement**:
 - Wizards move like chess kings: one square in any direction
