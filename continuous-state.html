@@ -126,47 +126,81 @@
 
         .tile {
             position: absolute;
-            border-radius: 2px;
+            border-radius: 4px;
             cursor: grab;
             transition: box-shadow 0.3s ease, transform 0.1s ease;
             user-select: none;
             -webkit-user-select: none;
+            overflow: hidden;
         }
 
         .tile:active {
             cursor: grabbing;
         }
 
+        /* Highlight strip on top */
+        .tile::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 25%;
+            border-radius: 4px 4px 50% 50%;
+            background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0) 100%);
+            pointer-events: none;
+        }
+
+        /* Shadow strip on bottom */
+        .tile::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 20%;
+            border-radius: 0 0 4px 4px;
+            background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.25) 100%);
+            pointer-events: none;
+        }
+
         .tile.stone {
-            background: linear-gradient(135deg, var(--stone-mid) 0%, var(--stone-dark) 100%);
+            background: linear-gradient(160deg, #6a6258 0%, var(--stone-mid) 40%, var(--stone-dark) 100%);
             box-shadow:
-                0 2px 6px rgba(0, 0, 0, 0.4),
-                inset 0 1px 2px rgba(255, 255, 255, 0.1),
-                inset 0 -1px 2px rgba(0, 0, 0, 0.3);
+                0 3px 8px rgba(0, 0, 0, 0.45),
+                0 1px 3px rgba(0, 0, 0, 0.3);
         }
 
         .tile.soil {
-            background: linear-gradient(135deg, var(--clay) 0%, var(--earth-warm) 100%);
+            background: linear-gradient(160deg, #b89070 0%, var(--clay) 40%, #7a5a40 100%);
             box-shadow:
-                0 2px 5px rgba(0, 0, 0, 0.35),
-                inset 0 1px 2px rgba(255, 255, 255, 0.08),
-                inset 0 -1px 2px rgba(0, 0, 0, 0.25);
+                0 3px 8px rgba(0, 0, 0, 0.4),
+                0 1px 3px rgba(0, 0, 0, 0.25);
         }
 
         .tile.moss {
-            background: linear-gradient(135deg, var(--moss-light) 0%, var(--moss) 100%);
+            background: linear-gradient(160deg, #90c080 0%, var(--moss-light) 40%, var(--moss) 100%);
             box-shadow:
-                0 2px 5px rgba(0, 0, 0, 0.35),
-                inset 0 1px 2px rgba(255, 255, 255, 0.1),
-                inset 0 -1px 2px rgba(0, 0, 0, 0.2);
+                0 3px 8px rgba(0, 0, 0, 0.4),
+                0 1px 3px rgba(0, 0, 0, 0.25);
         }
 
         .tile.water {
-            background: linear-gradient(135deg, var(--water) 0%, rgba(92, 122, 140, 0.8) 100%);
+            background: linear-gradient(160deg, #7a9aac 0%, var(--water) 40%, #4a6a7c 100%);
             box-shadow:
-                0 2px 6px rgba(0, 0, 0, 0.3),
-                inset 0 2px 4px rgba(255, 255, 255, 0.15),
-                inset 0 -1px 2px rgba(0, 0, 0, 0.2);
+                0 3px 8px rgba(0, 0, 0, 0.35),
+                0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Subtle texture marks - different for each type */
+        .tile.stone .texture-mark,
+        .tile.soil .texture-mark,
+        .tile.moss .texture-mark,
+        .tile.water .texture-mark {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0.3;
         }
 
         /* Stress states */
@@ -177,26 +211,34 @@
         .tile.stressed {
             animation: stress 0.3s ease-in-out infinite;
             box-shadow:
-                0 2px 6px rgba(0, 0, 0, 0.4),
-                0 0 8px rgba(166, 76, 60, 0.3),
-                inset 0 1px 2px rgba(255, 255, 255, 0.1),
-                inset 0 -1px 2px rgba(0, 0, 0, 0.3);
+                0 3px 8px rgba(0, 0, 0, 0.4),
+                0 0 10px rgba(166, 76, 60, 0.35),
+                0 1px 3px rgba(0, 0, 0, 0.3);
         }
 
-        .tile.cracked::after {
-            content: '';
+        .tile.cracked .crack-line {
             position: absolute;
             top: 20%;
             left: 30%;
             width: 40%;
             height: 60%;
-            background: linear-gradient(45deg, transparent 40%, rgba(0,0,0,0.3) 45%, transparent 50%);
+            background: linear-gradient(45deg, transparent 40%, rgba(0,0,0,0.4) 45%, transparent 50%);
             pointer-events: none;
+            z-index: 2;
         }
 
         .tile.settled {
-            filter: saturate(0.8) brightness(0.95);
+            filter: saturate(0.85) brightness(0.92);
             transition: filter 2s ease;
+        }
+
+        /* Settled indicator dots */
+        .tile.settled .settled-dot {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            pointer-events: none;
+            z-index: 1;
         }
 
         .tile.falling {
@@ -210,11 +252,11 @@
         .tile.dragging {
             z-index: 100;
             box-shadow:
-                0 8px 20px rgba(0, 0, 0, 0.5),
-                0 4px 10px rgba(0, 0, 0, 0.3),
-                inset 0 1px 2px rgba(255, 255, 255, 0.15);
+                0 12px 28px rgba(0, 0, 0, 0.5),
+                0 6px 12px rgba(0, 0, 0, 0.35);
             transform: scale(1.05);
             cursor: grabbing;
+            filter: brightness(1.1);
         }
 
         @keyframes strain {
@@ -692,6 +734,42 @@
             tile.style.left = `${config.x}px`;
             tile.style.top = `${config.y}px`;
 
+            // Add texture marks (1-3 small marks per tile)
+            const numMarks = Math.floor(Math.random() * 3) + 1;
+            for (let i = 0; i < numMarks; i++) {
+                const mark = document.createElement('div');
+                mark.className = 'texture-mark';
+                const size = 2 + Math.random() * 3;
+                mark.style.width = `${size}px`;
+                mark.style.height = `${size}px`;
+                mark.style.left = `${15 + Math.random() * 70}%`;
+                mark.style.top = `${25 + Math.random() * 50}%`;
+                mark.style.background = config.type === 'water'
+                    ? 'rgba(255,255,255,0.3)'
+                    : 'rgba(0,0,0,0.15)';
+                tile.appendChild(mark);
+            }
+
+            // Add settled indicator dots (hidden initially, shown when settled)
+            for (let i = 0; i < 2; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'settled-dot';
+                const size = 2 + Math.random() * 2;
+                dot.style.width = `${size}px`;
+                dot.style.height = `${size}px`;
+                dot.style.left = `${20 + Math.random() * 60}%`;
+                dot.style.top = `${40 + Math.random() * 40}%`;
+                dot.style.opacity = '0';
+                dot.style.transition = 'opacity 1s ease';
+                tile.appendChild(dot);
+            }
+
+            // Add crack line element (hidden initially)
+            const crackLine = document.createElement('div');
+            crackLine.className = 'crack-line';
+            crackLine.style.display = 'none';
+            tile.appendChild(crackLine);
+
             container.appendChild(tile);
 
             state.tiles.push({
@@ -905,12 +983,20 @@
                     if (tile.settledTime > 60) {
                         tile.settled = true;
                         tile.element.classList.add('settled');
+                        // Show settled dots
+                        tile.element.querySelectorAll('.settled-dot').forEach(dot => {
+                            dot.style.opacity = '0.5';
+                        });
                         playSound('settle');
                     }
                 } else if (!isSettled) {
                     tile.settled = false;
                     tile.settledTime = 0;
                     tile.element.classList.remove('settled');
+                    // Hide settled dots
+                    tile.element.querySelectorAll('.settled-dot').forEach(dot => {
+                        dot.style.opacity = '0';
+                    });
                 }
 
                 // Update element position
@@ -983,9 +1069,12 @@
 
                 // Apply stress visual states
                 tile.element.classList.remove('strained', 'stressed', 'cracked');
+                const crackLine = tile.element.querySelector('.crack-line');
+                if (crackLine) crackLine.style.display = 'none';
 
                 if (tile.stress > 8) {
                     tile.element.classList.add('cracked');
+                    if (crackLine) crackLine.style.display = 'block';
                     // Chance to break/slide
                     if (Math.random() < 0.02) {
                         tile.vx += (Math.random() - 0.5) * 3;
