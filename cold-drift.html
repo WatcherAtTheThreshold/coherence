@@ -134,6 +134,48 @@
             50% { opacity: 0.7; }
         }
 
+        /* Buff display */
+        #buff-display {
+            display: flex;
+            gap: 0.4rem;
+            margin-left: 0.5rem;
+        }
+
+        .buff {
+            font-size: 0.9rem;
+            padding: 2px 6px;
+            background: rgba(116, 185, 255, 0.2);
+            border: 1px solid rgba(116, 185, 255, 0.4);
+            border-radius: 4px;
+            animation: buffPulse 1.5s ease-in-out infinite;
+        }
+
+        .buff.hidden {
+            display: none;
+        }
+
+        .buff.debuff {
+            background: rgba(238, 82, 83, 0.2);
+            border-color: rgba(238, 82, 83, 0.4);
+            animation: debuffPulse 0.8s ease-in-out infinite;
+        }
+
+        .buff-count {
+            font-size: 0.65rem;
+            color: var(--accent-cold);
+            margin-left: 2px;
+        }
+
+        @keyframes buffPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+
+        @keyframes debuffPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
         #status {
             margin-top: 0.5rem;
             font-size: clamp(0.7rem, 1.5vw, 0.85rem);
@@ -284,6 +326,11 @@
             <div id="stamina-bar-bg">
                 <div id="stamina-bar"></div>
             </div>
+            <div id="buff-display">
+                <span id="buff-shovels" class="buff hidden" title="Free shovels">❄</span>
+                <span id="buff-speed" class="buff hidden" title="Speed boost">⚡</span>
+                <span id="debuff-slow" class="buff debuff hidden" title="Wizard channeling">🌀</span>
+            </div>
         </div>
 
         <div id="status">
@@ -293,7 +340,7 @@
         </div>
 
         <div class="instructions">
-            wasd or arrows to move • shoveling uses stamina • rest to recover • rescue animals for energy
+            wasd or arrows to move • rest to recover stamina • each animal grants a unique gift
         </div>
     </div>
 
@@ -376,7 +423,11 @@
             stamina: 100,
             lastMoveTime: 0,
             isMoving: false,
-            restTimer: 0        // Frames since last movement
+            restTimer: 0,       // Frames since last movement
+            // Buffs & Debuffs
+            freeShovels: 0,     // Bird: free shovel charges
+            speedBoostEnd: 0,   // Squirrel: timestamp when speed boost ends
+            wizardSlowEnd: 0    // Wizard: timestamp when slowdown ends
         };
 
         // ============================================
@@ -658,6 +709,19 @@
         let lastMoveFrame = 0;
 
         function getMoveDelay() {
+            const now = Date.now();
+
+            // Wizard slowdown takes priority (half speed = double delay)
+            if (now < game.wizardSlowEnd) {
+                return 12; // Half speed for 5 seconds
+            }
+
+            // Squirrel speed boost (faster movement)
+            if (now < game.speedBoostEnd) {
+                return 0; // Super fast!
+            }
+
+            // Normal stamina-based delays
             if (game.stamina <= STAMINA.exhaustedThreshold) {
                 return STAMINA.moveDelay.exhausted;
             } else if (game.stamina <= STAMINA.tiredThreshold) {
@@ -714,12 +778,19 @@
             game.snow[y][x] = 0;
             game.clearedCount++;
 
-            // Drain stamina based on snow depth
-            const staminaCost = Math.ceil(STAMINA.shovelCost * (snowAmount / 3));
-            game.stamina = Math.max(0, game.stamina - staminaCost);
-            updateStaminaBar();
-
-            playSound('shovel');
+            // Check for free shovels (bird buff)
+            if (game.freeShovels > 0) {
+                game.freeShovels--;
+                updateBuffDisplay();
+                // Play a lighter shovel sound for free shovels
+                playSound('step');
+            } else {
+                // Drain stamina based on snow depth
+                const staminaCost = Math.ceil(STAMINA.shovelCost * (snowAmount / 3));
+                game.stamina = Math.max(0, game.stamina - staminaCost);
+                updateStaminaBar();
+                playSound('shovel');
+            }
 
             // Create snow particles
             for (let i = 0; i < snowAmount * 2; i++) {
@@ -756,14 +827,37 @@
                     animal.revealed = true;
                     playSound('rescue');
                     game.rescuedCount++;
-
-                    // Reward stamina for rescuing
-                    game.stamina = Math.min(STAMINA.max, game.stamina + STAMINA.animalReward);
-                    updateStaminaBar();
                     updateStatus();
 
-                    // Play energize sound after rescue sound
-                    setTimeout(() => playSound('energize'), 200);
+                    // Apply effect based on animal type
+                    switch (animal.type) {
+                        case 'bird':
+                            // Full stamina recharge + 20 free shovels
+                            game.stamina = STAMINA.max;
+                            game.freeShovels += 20;
+                            updateStaminaBar();
+                            updateBuffDisplay();
+                            setTimeout(() => playSound('energize'), 200);
+                            break;
+
+                        case 'squirrel':
+                            // Speed boost for 15 seconds
+                            game.speedBoostEnd = Date.now() + 15000;
+                            game.stamina = Math.min(STAMINA.max, game.stamina + 10); // Small stamina bonus
+                            updateStaminaBar();
+                            updateBuffDisplay();
+                            setTimeout(() => playSound('energize'), 200);
+                            break;
+
+                        case 'rabbit':
+                        case 'cat':
+                        default:
+                            // Standard stamina reward
+                            game.stamina = Math.min(STAMINA.max, game.stamina + STAMINA.animalReward);
+                            updateStaminaBar();
+                            setTimeout(() => playSound('energize'), 200);
+                            break;
+                    }
 
                     // Start fleeing after a moment
                     setTimeout(() => {
@@ -798,7 +892,10 @@
 
             // Wizards cost stamina to channel their power
             game.stamina = Math.max(0, game.stamina - STAMINA.wizardCost);
+            // Wizard channeling slows you down for 5 seconds
+            game.wizardSlowEnd = Date.now() + 5000;
             updateStaminaBar();
+            updateBuffDisplay();
             updateStatus();
 
             const element = ELEMENTS[wizard.element];
@@ -976,6 +1073,9 @@
                 game.stamina = Math.min(STAMINA.max, game.stamina + STAMINA.rechargeRate);
                 updateStaminaBar();
             }
+
+            // Update buff display timers
+            updateBuffDisplay();
 
             // Update particles
             for (let i = game.particles.length - 1; i >= 0; i--) {
@@ -1213,6 +1313,56 @@
                 ctx.arc(puffX, puffY, 2 * s * (1 - puffProgress * 0.5), 0, Math.PI * 2);
                 ctx.fill();
             }
+
+            const now = Date.now();
+
+            // Speed boost effect (squirrel) - yellow sparkles
+            if (now < game.speedBoostEnd) {
+                ctx.fillStyle = '#feca57';
+                ctx.globalAlpha = 0.6 + Math.sin(now / 100) * 0.3;
+                for (let i = 0; i < 3; i++) {
+                    const sparkleX = px + Math.sin(now / 150 + i * 2) * 8 * s;
+                    const sparkleY = py + Math.cos(now / 150 + i * 2) * 8 * s;
+                    ctx.beginPath();
+                    ctx.arc(sparkleX, sparkleY, 1.5 * s, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.globalAlpha = 1;
+            }
+
+            // Wizard slow effect - purple swirl
+            if (now < game.wizardSlowEnd) {
+                ctx.strokeStyle = '#a070c0';
+                ctx.lineWidth = 2;
+                ctx.globalAlpha = 0.5 + Math.sin(now / 200) * 0.2;
+                ctx.beginPath();
+                const swirls = 2;
+                for (let i = 0; i < 20; i++) {
+                    const angle = (i / 20) * Math.PI * swirls + now / 500;
+                    const radius = (i / 20) * 12 * s;
+                    const sx = px + Math.cos(angle) * radius;
+                    const sy = py + Math.sin(angle) * radius;
+                    if (i === 0) ctx.moveTo(sx, sy);
+                    else ctx.lineTo(sx, sy);
+                }
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+            }
+
+            // Free shovels indicator - snowflake particles around player
+            if (game.freeShovels > 0) {
+                ctx.fillStyle = '#74b9ff';
+                ctx.globalAlpha = 0.5;
+                for (let i = 0; i < Math.min(game.freeShovels, 6); i++) {
+                    const angle = (i / 6) * Math.PI * 2 + now / 1000;
+                    const flakeX = px + Math.cos(angle) * 14 * s;
+                    const flakeY = py + Math.sin(angle) * 10 * s - 2 * s;
+                    ctx.beginPath();
+                    ctx.arc(flakeX, flakeY, 1.5 * s, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.globalAlpha = 1;
+            }
         }
 
         function drawAnimal(animal) {
@@ -1410,6 +1560,39 @@
                 bar.classList.add('exhausted');
             } else if (game.stamina <= STAMINA.tiredThreshold) {
                 bar.classList.add('tired');
+            }
+        }
+
+        function updateBuffDisplay() {
+            const now = Date.now();
+            const shovelsBuff = document.getElementById('buff-shovels');
+            const speedBuff = document.getElementById('buff-speed');
+            const slowDebuff = document.getElementById('debuff-slow');
+
+            // Free shovels (bird)
+            if (game.freeShovels > 0) {
+                shovelsBuff.classList.remove('hidden');
+                shovelsBuff.innerHTML = '❄<span class="buff-count">' + game.freeShovels + '</span>';
+            } else {
+                shovelsBuff.classList.add('hidden');
+            }
+
+            // Speed boost (squirrel)
+            if (now < game.speedBoostEnd) {
+                speedBuff.classList.remove('hidden');
+                const remaining = Math.ceil((game.speedBoostEnd - now) / 1000);
+                speedBuff.innerHTML = '⚡<span class="buff-count">' + remaining + 's</span>';
+            } else {
+                speedBuff.classList.add('hidden');
+            }
+
+            // Wizard slowdown
+            if (now < game.wizardSlowEnd) {
+                slowDebuff.classList.remove('hidden');
+                const remaining = Math.ceil((game.wizardSlowEnd - now) / 1000);
+                slowDebuff.innerHTML = '🌀<span class="buff-count">' + remaining + 's</span>';
+            } else {
+                slowDebuff.classList.add('hidden');
             }
         }
 
