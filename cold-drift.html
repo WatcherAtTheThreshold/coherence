@@ -84,8 +84,58 @@
             image-rendering: pixelated;
         }
 
-        #status {
+        /* Stamina bar */
+        #stamina-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
             margin-top: 0.75rem;
+        }
+
+        #stamina-label {
+            font-size: clamp(0.6rem, 1.3vw, 0.72rem);
+            color: var(--text-dim);
+            letter-spacing: 0.1rem;
+            text-transform: lowercase;
+        }
+
+        #stamina-bar-bg {
+            width: 150px;
+            height: 12px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(116, 185, 255, 0.3);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        #stamina-bar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-cold) 0%, #a0d8ff 100%);
+            border-radius: 5px;
+            transition: width 0.15s ease-out, background 0.3s ease;
+            box-shadow: 0 0 8px rgba(116, 185, 255, 0.4);
+        }
+
+        #stamina-bar.tired {
+            background: linear-gradient(90deg, #fd9644 0%, #feca57 100%);
+            box-shadow: 0 0 8px rgba(253, 150, 68, 0.4);
+        }
+
+        #stamina-bar.exhausted {
+            background: linear-gradient(90deg, #ee5253 0%, #ff6b6b 100%);
+            box-shadow: 0 0 8px rgba(238, 82, 83, 0.4);
+            animation: exhaustedPulse 0.5s ease-in-out infinite;
+        }
+
+        @keyframes exhaustedPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        #status {
+            margin-top: 0.5rem;
             font-size: clamp(0.7rem, 1.5vw, 0.85rem);
             color: var(--text-dim);
             letter-spacing: 0.15rem;
@@ -229,6 +279,13 @@
             <canvas id="canvas"></canvas>
         </div>
 
+        <div id="stamina-container">
+            <div id="stamina-label">stamina</div>
+            <div id="stamina-bar-bg">
+                <div id="stamina-bar"></div>
+            </div>
+        </div>
+
         <div id="status">
             cleared: <span id="cleared-count">0</span> |
             rescued: <span id="rescued-count">0</span> |
@@ -236,7 +293,7 @@
         </div>
 
         <div class="instructions">
-            wasd or arrows to move and shovel • clear the paths • rescue buried friends
+            wasd or arrows to move • shoveling uses stamina • rest to recover • rescue animals for energy
         </div>
     </div>
 
@@ -284,6 +341,22 @@
         // ============================================
         // GAME STATE
         // ============================================
+        // Stamina system
+        const STAMINA = {
+            max: 100,
+            shovelCost: 8,          // Cost per snow block cleared
+            wizardCost: 25,         // Cost to activate wizard
+            animalReward: 20,       // Stamina gained from rescuing animal
+            rechargeRate: 0.8,      // Stamina per frame when resting
+            moveDelay: {
+                full: 0,            // Frames between moves at full stamina
+                tired: 8,           // Frames between moves when tired
+                exhausted: 16       // Frames between moves when exhausted
+            },
+            tiredThreshold: 40,     // Below this = tired
+            exhaustedThreshold: 15  // Below this = exhausted
+        };
+
         const game = {
             grid: [],           // Base tile types
             snow: [],           // Snow depth per tile (0-5)
@@ -298,7 +371,12 @@
             snowTimer: 0,
             snowInterval: 120,  // Frames between snow falling
             running: false,
-            lastTime: 0
+            lastTime: 0,
+            // Stamina
+            stamina: 100,
+            lastMoveTime: 0,
+            isMoving: false,
+            restTimer: 0        // Frames since last movement
         };
 
         // ============================================
@@ -377,6 +455,28 @@
                     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
                     osc.start(now);
                     osc.stop(now + 0.05);
+                    break;
+
+                case 'tired':
+                    // Low wheeze/puff sound
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(180, now);
+                    osc.frequency.exponentialRampToValueAtTime(120, now + 0.15);
+                    gain.gain.setValueAtTime(0.06, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                    break;
+
+                case 'energize':
+                    // Quick ascending chirp for stamina gain
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.exponentialRampToValueAtTime(500, now + 0.1);
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+                    osc.start(now);
+                    osc.stop(now + 0.12);
                     break;
             }
         }
@@ -554,7 +654,34 @@
         // ============================================
         // PLAYER MOVEMENT & SHOVELING
         // ============================================
+        let moveQueue = null;
+        let lastMoveFrame = 0;
+
+        function getMoveDelay() {
+            if (game.stamina <= STAMINA.exhaustedThreshold) {
+                return STAMINA.moveDelay.exhausted;
+            } else if (game.stamina <= STAMINA.tiredThreshold) {
+                return STAMINA.moveDelay.tired;
+            }
+            return STAMINA.moveDelay.full;
+        }
+
+        function canMove() {
+            const now = performance.now();
+            const delay = getMoveDelay();
+            return (now - game.lastMoveTime) >= (delay * 16.67); // ~60fps timing
+        }
+
         function movePlayer(dx, dy) {
+            // Check if we can move based on stamina
+            if (!canMove()) {
+                // Play tired sound occasionally when trying to move exhausted
+                if (game.stamina <= STAMINA.exhaustedThreshold && Math.random() < 0.3) {
+                    playSound('tired');
+                }
+                return;
+            }
+
             const newX = game.player.x + dx;
             const newY = game.player.y + dy;
 
@@ -567,6 +694,9 @@
             // Move player
             game.player.x = newX;
             game.player.y = newY;
+            game.lastMoveTime = performance.now();
+            game.isMoving = true;
+            game.restTimer = 0;
 
             // Shovel snow at new position
             if (game.snow[newY][newX] > 0) {
@@ -583,6 +713,11 @@
             const snowAmount = game.snow[y][x];
             game.snow[y][x] = 0;
             game.clearedCount++;
+
+            // Drain stamina based on snow depth
+            const staminaCost = Math.ceil(STAMINA.shovelCost * (snowAmount / 3));
+            game.stamina = Math.max(0, game.stamina - staminaCost);
+            updateStaminaBar();
 
             playSound('shovel');
 
@@ -621,7 +756,14 @@
                     animal.revealed = true;
                     playSound('rescue');
                     game.rescuedCount++;
+
+                    // Reward stamina for rescuing
+                    game.stamina = Math.min(STAMINA.max, game.stamina + STAMINA.animalReward);
+                    updateStaminaBar();
                     updateStatus();
+
+                    // Play energize sound after rescue sound
+                    setTimeout(() => playSound('energize'), 200);
 
                     // Start fleeing after a moment
                     setTimeout(() => {
@@ -653,6 +795,10 @@
         function activateWizardBurst(wizard) {
             wizard.activated = true;
             game.wizardCount++;
+
+            // Wizards cost stamina to channel their power
+            game.stamina = Math.max(0, game.stamina - STAMINA.wizardCost);
+            updateStaminaBar();
             updateStatus();
 
             const element = ELEMENTS[wizard.element];
@@ -820,6 +966,17 @@
         function update() {
             snowFall();
 
+            // Stamina recharge when resting
+            game.restTimer++;
+            if (game.restTimer > 30) { // Start recharging after ~0.5 seconds of rest
+                game.isMoving = false;
+            }
+
+            if (!game.isMoving && game.stamina < STAMINA.max) {
+                game.stamina = Math.min(STAMINA.max, game.stamina + STAMINA.rechargeRate);
+                updateStaminaBar();
+            }
+
             // Update particles
             for (let i = game.particles.length - 1; i >= 0; i--) {
                 const p = game.particles[i];
@@ -978,44 +1135,84 @@
             const py = game.player.y * TILE_SIZE + TILE_SIZE / 2;
             const s = TILE_SIZE / 20; // Scale factor
 
+            // Tired visual effect - slight bob when exhausted
+            let tiredOffset = 0;
+            if (game.stamina <= STAMINA.exhaustedThreshold) {
+                tiredOffset = Math.sin(Date.now() / 200) * 1.5;
+            } else if (game.stamina <= STAMINA.tiredThreshold) {
+                tiredOffset = Math.sin(Date.now() / 300) * 0.8;
+            }
+
             // Shadow
             ctx.fillStyle = 'rgba(0,0,0,0.2)';
             ctx.beginPath();
             ctx.ellipse(px, py + 8 * s, 6 * s, 3 * s, 0, 0, Math.PI * 2);
             ctx.fill();
 
-            // Body (winter coat)
-            ctx.fillStyle = '#5c7090';
-            ctx.fillRect(px - 5 * s, py - 4 * s, 10 * s, 12 * s);
+            // Body (winter coat) - slightly dimmer when tired
+            const coatColor = game.stamina <= STAMINA.exhaustedThreshold ? '#4a5a70' :
+                              game.stamina <= STAMINA.tiredThreshold ? '#526580' : '#5c7090';
+            ctx.fillStyle = coatColor;
+            ctx.fillRect(px - 5 * s, py - 4 * s + tiredOffset, 10 * s, 12 * s);
 
             // Head
             ctx.fillStyle = '#e8c4a0';
             ctx.beginPath();
-            ctx.arc(px, py - 6 * s, 5 * s, 0, Math.PI * 2);
+            ctx.arc(px, py - 6 * s + tiredOffset, 5 * s, 0, Math.PI * 2);
             ctx.fill();
 
             // Winter hat
             ctx.fillStyle = '#c04040';
-            ctx.fillRect(px - 5 * s, py - 11 * s, 10 * s, 5 * s);
+            ctx.fillRect(px - 5 * s, py - 11 * s + tiredOffset, 10 * s, 5 * s);
             ctx.fillStyle = '#e0e0e0';
-            ctx.fillRect(px - 6 * s, py - 7 * s, 12 * s, 2 * s);
+            ctx.fillRect(px - 6 * s, py - 7 * s + tiredOffset, 12 * s, 2 * s);
 
             // Pom pom
             ctx.fillStyle = '#e0e0e0';
             ctx.beginPath();
-            ctx.arc(px, py - 12 * s, 2 * s, 0, Math.PI * 2);
+            ctx.arc(px, py - 12 * s + tiredOffset, 2 * s, 0, Math.PI * 2);
             ctx.fill();
 
-            // Eyes
+            // Eyes - closed/squinting when exhausted
             ctx.fillStyle = '#202020';
-            ctx.fillRect(px - 3 * s, py - 7 * s, 2 * s, 2 * s);
-            ctx.fillRect(px + 1 * s, py - 7 * s, 2 * s, 2 * s);
+            if (game.stamina <= STAMINA.exhaustedThreshold) {
+                // Squinting eyes
+                ctx.fillRect(px - 3 * s, py - 6 * s + tiredOffset, 2 * s, 1 * s);
+                ctx.fillRect(px + 1 * s, py - 6 * s + tiredOffset, 2 * s, 1 * s);
+            } else {
+                ctx.fillRect(px - 3 * s, py - 7 * s + tiredOffset, 2 * s, 2 * s);
+                ctx.fillRect(px + 1 * s, py - 7 * s + tiredOffset, 2 * s, 2 * s);
+            }
 
-            // Shovel
+            // Sweat drops when tired
+            if (game.stamina <= STAMINA.tiredThreshold) {
+                ctx.fillStyle = '#74b9ff';
+                ctx.globalAlpha = 0.7;
+                const sweatY = py - 4 * s + tiredOffset + Math.sin(Date.now() / 150) * 2;
+                ctx.beginPath();
+                ctx.ellipse(px + 6 * s, sweatY, 1 * s, 1.5 * s, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+
+            // Shovel - held lower when tired
+            const shovelDroop = game.stamina <= STAMINA.exhaustedThreshold ? 3 :
+                               game.stamina <= STAMINA.tiredThreshold ? 1.5 : 0;
             ctx.fillStyle = '#8b6914';
-            ctx.fillRect(px + 6 * s, py - 8 * s, 2 * s, 14 * s);
+            ctx.fillRect(px + 6 * s, py - 8 * s + tiredOffset + shovelDroop, 2 * s, 14 * s);
             ctx.fillStyle = '#606060';
-            ctx.fillRect(px + 4 * s, py + 4 * s, 6 * s, 4 * s);
+            ctx.fillRect(px + 4 * s, py + 4 * s + tiredOffset + shovelDroop, 6 * s, 4 * s);
+
+            // Puff clouds when exhausted and just stopped
+            if (game.stamina <= STAMINA.tiredThreshold && game.restTimer > 10 && game.restTimer < 60) {
+                ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                const puffProgress = (game.restTimer - 10) / 50;
+                const puffX = px - 6 * s - puffProgress * 8;
+                const puffY = py - 3 * s + tiredOffset;
+                ctx.beginPath();
+                ctx.arc(puffX, puffY, 2 * s * (1 - puffProgress * 0.5), 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
 
         function drawAnimal(animal) {
@@ -1200,6 +1397,20 @@
             document.getElementById('cleared-count').textContent = game.clearedCount;
             document.getElementById('rescued-count').textContent = game.rescuedCount;
             document.getElementById('wizard-count').textContent = game.wizardCount;
+        }
+
+        function updateStaminaBar() {
+            const bar = document.getElementById('stamina-bar');
+            const percent = (game.stamina / STAMINA.max) * 100;
+            bar.style.width = percent + '%';
+
+            // Update color class based on stamina level
+            bar.classList.remove('tired', 'exhausted');
+            if (game.stamina <= STAMINA.exhaustedThreshold) {
+                bar.classList.add('exhausted');
+            } else if (game.stamina <= STAMINA.tiredThreshold) {
+                bar.classList.add('tired');
+            }
         }
 
         function createBackgroundSnow() {
