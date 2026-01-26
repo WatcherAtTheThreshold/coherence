@@ -114,10 +114,10 @@
         }
 
         /* Fan rotation - outer cards offset down to compensate for rotation lift */
-        .card-flip:nth-child(1) { transform: rotate(-6deg) translateY(5px); }
+        .card-flip:nth-child(1) { transform: rotate(-6deg) translateY(7px); }
         .card-flip:nth-child(2) { transform: rotate(-2deg); }
         .card-flip:nth-child(3) { transform: rotate(2deg); }
-        .card-flip:nth-child(4) { transform: rotate(6deg) translateY(5px); }
+        .card-flip:nth-child(4) { transform: rotate(6deg) translateY(7px); }
 
         .card-flip-inner {
             position: relative;
@@ -247,27 +247,27 @@
             }
         }
 
-        /* Restore final rotation after animation */
-        .card-flip:nth-child(1) { animation: cardIn1 0.6s ease-out 0.1s both; }
-        .card-flip:nth-child(2) { animation: cardIn2 0.6s ease-out 0.2s both; }
-        .card-flip:nth-child(3) { animation: cardIn3 0.6s ease-out 0.3s both; }
-        .card-flip:nth-child(4) { animation: cardIn4 0.6s ease-out 0.4s both; }
+        /* Restore final rotation after animation - smooth easing */
+        .card-flip:nth-child(1) { animation: cardIn1 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.1s both; }
+        .card-flip:nth-child(2) { animation: cardIn2 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.2s both; }
+        .card-flip:nth-child(3) { animation: cardIn3 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.3s both; }
+        .card-flip:nth-child(4) { animation: cardIn4 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.4s both; }
 
         @keyframes cardIn1 {
-            from { opacity: 0; transform: translateY(40px) rotate(0deg) scale(0.9); }
-            to { opacity: 1; transform: rotate(-6deg) translateY(5px); }
+            from { opacity: 0; transform: translateY(30px) rotate(0deg) scale(0.95); }
+            to { opacity: 1; transform: rotate(-6deg) translateY(7px); }
         }
         @keyframes cardIn2 {
-            from { opacity: 0; transform: translateY(40px) rotate(0deg) scale(0.9); }
+            from { opacity: 0; transform: translateY(30px) rotate(0deg) scale(0.95); }
             to { opacity: 1; transform: rotate(-2deg); }
         }
         @keyframes cardIn3 {
-            from { opacity: 0; transform: translateY(40px) rotate(0deg) scale(0.9); }
+            from { opacity: 0; transform: translateY(30px) rotate(0deg) scale(0.95); }
             to { opacity: 1; transform: rotate(2deg); }
         }
         @keyframes cardIn4 {
-            from { opacity: 0; transform: translateY(40px) rotate(0deg) scale(0.9); }
-            to { opacity: 1; transform: rotate(6deg) translateY(5px); }
+            from { opacity: 0; transform: translateY(30px) rotate(0deg) scale(0.95); }
+            to { opacity: 1; transform: rotate(6deg) translateY(7px); }
         }
 
         footer {
