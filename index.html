@@ -113,11 +113,11 @@
             margin-left: 0;
         }
 
-        /* Fan rotation */
-        .card-flip:nth-child(1) { transform: rotate(-6deg); }
+        /* Fan rotation - outer cards offset down to compensate for rotation lift */
+        .card-flip:nth-child(1) { transform: rotate(-6deg) translateY(5px); }
         .card-flip:nth-child(2) { transform: rotate(-2deg); }
         .card-flip:nth-child(3) { transform: rotate(2deg); }
-        .card-flip:nth-child(4) { transform: rotate(6deg); }
+        .card-flip:nth-child(4) { transform: rotate(6deg) translateY(5px); }
 
         .card-flip-inner {
             position: relative;
@@ -255,7 +255,7 @@
 
         @keyframes cardIn1 {
             from { opacity: 0; transform: translateY(40px) rotate(0deg) scale(0.9); }
-            to { opacity: 1; transform: rotate(-6deg); }
+            to { opacity: 1; transform: rotate(-6deg) translateY(5px); }
         }
         @keyframes cardIn2 {
             from { opacity: 0; transform: translateY(40px) rotate(0deg) scale(0.9); }
@@ -267,7 +267,7 @@
         }
         @keyframes cardIn4 {
             from { opacity: 0; transform: translateY(40px) rotate(0deg) scale(0.9); }
-            to { opacity: 1; transform: rotate(6deg); }
+            to { opacity: 1; transform: rotate(6deg) translateY(5px); }
         }
 
         footer {
