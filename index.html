@@ -17,6 +17,7 @@
             --accent-amber: #d4a574;
             --accent-warm: #c07050;
             --accent-cosmic: #a070c0;
+            --accent-cold: #74b9ff;
         }
 
         * {
@@ -114,10 +115,11 @@
         }
 
         /* Fan rotation - outer cards offset down to compensate for rotation lift */
-        .card-flip:nth-child(1) { transform: rotate(-6deg) translateY(7px); }
-        .card-flip:nth-child(2) { transform: rotate(-2deg); }
-        .card-flip:nth-child(3) { transform: rotate(2deg); }
-        .card-flip:nth-child(4) { transform: rotate(6deg) translateY(7px); }
+        .card-flip:nth-child(1) { transform: rotate(-8deg) translateY(9px); }
+        .card-flip:nth-child(2) { transform: rotate(-4deg) translateY(3px); }
+        .card-flip:nth-child(3) { transform: rotate(0deg); }
+        .card-flip:nth-child(4) { transform: rotate(4deg) translateY(3px); }
+        .card-flip:nth-child(5) { transform: rotate(8deg) translateY(9px); }
 
         .card-flip-inner {
             position: relative;
@@ -188,6 +190,7 @@
         .card-flip:nth-child(2) .card-title { color: var(--accent-amber); }
         .card-flip:nth-child(3) .card-title { color: var(--accent-warm); }
         .card-flip:nth-child(4) .card-title { color: var(--accent-cosmic); }
+        .card-flip:nth-child(5) .card-title { color: var(--accent-cold); }
 
         /* Container hover - spread cards */
         .card-spread:hover .card-flip {
@@ -231,43 +234,37 @@
             box-shadow: 0 8px 30px rgba(160, 112, 192, 0.2);
         }
 
-        /* Stagger animation */
-        .card-flip:nth-child(1) { animation: cardIn 0.6s ease-out 0.1s both; }
-        .card-flip:nth-child(2) { animation: cardIn 0.6s ease-out 0.2s both; }
-        .card-flip:nth-child(3) { animation: cardIn 0.6s ease-out 0.3s both; }
-        .card-flip:nth-child(4) { animation: cardIn 0.6s ease-out 0.4s both; }
-
-        @keyframes cardIn {
-            from {
-                opacity: 0;
-                transform: translateY(40px) rotate(0deg) scale(0.9);
-            }
-            to {
-                opacity: 1;
-            }
+        .card-flip:nth-child(5):hover .card-front {
+            border-color: rgba(116, 185, 255, 0.5);
+            box-shadow: 0 8px 30px rgba(116, 185, 255, 0.2);
         }
 
         /* Restore final rotation after animation - smooth easing */
-        .card-flip:nth-child(1) { animation: cardIn1 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.1s both; }
-        .card-flip:nth-child(2) { animation: cardIn2 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.2s both; }
-        .card-flip:nth-child(3) { animation: cardIn3 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.3s both; }
-        .card-flip:nth-child(4) { animation: cardIn4 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.4s both; }
+        .card-flip:nth-child(1) { animation: cardIn1 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.05s both; }
+        .card-flip:nth-child(2) { animation: cardIn2 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.12s both; }
+        .card-flip:nth-child(3) { animation: cardIn3 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.19s both; }
+        .card-flip:nth-child(4) { animation: cardIn4 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.26s both; }
+        .card-flip:nth-child(5) { animation: cardIn5 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.33s both; }
 
         @keyframes cardIn1 {
             from { opacity: 0; transform: translateY(30px) rotate(0deg) scale(0.95); }
-            to { opacity: 1; transform: rotate(-6deg) translateY(7px); }
+            to { opacity: 1; transform: rotate(-8deg) translateY(9px); }
         }
         @keyframes cardIn2 {
             from { opacity: 0; transform: translateY(30px) rotate(0deg) scale(0.95); }
-            to { opacity: 1; transform: rotate(-2deg); }
+            to { opacity: 1; transform: rotate(-4deg) translateY(3px); }
         }
         @keyframes cardIn3 {
             from { opacity: 0; transform: translateY(30px) rotate(0deg) scale(0.95); }
-            to { opacity: 1; transform: rotate(2deg); }
+            to { opacity: 1; transform: rotate(0deg); }
         }
         @keyframes cardIn4 {
             from { opacity: 0; transform: translateY(30px) rotate(0deg) scale(0.95); }
-            to { opacity: 1; transform: rotate(6deg) translateY(7px); }
+            to { opacity: 1; transform: rotate(4deg) translateY(3px); }
+        }
+        @keyframes cardIn5 {
+            from { opacity: 0; transform: translateY(30px) rotate(0deg) scale(0.95); }
+            to { opacity: 1; transform: rotate(8deg) translateY(9px); }
         }
 
         footer {
@@ -355,7 +352,7 @@
     <div class="container">
         <header>
             <h1>Coherence</h1>
-            <p class="tagline">four meditations on presence, patience, and the quiet act of tending</p>
+            <p class="tagline">five meditations on presence, patience, and the quiet act of tending</p>
         </header>
 
         <nav class="card-spread">
@@ -488,6 +485,53 @@
                         </div>
                         <div class="card-title">Wizard Masters</div>
                         <div class="card-subtitle">elemental tactics</div>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Cold Drift Card - Shoveler with snowflake -->
+            <a href="cold-drift.html" class="card-flip">
+                <div class="card-flip-inner">
+                    <div class="card-front">
+                        <div class="card-icon">
+                            <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <!-- Snow glow -->
+                                <defs>
+                                    <radialGradient id="snowGlow" cx="50%" cy="50%" r="50%">
+                                        <stop offset="0%" stop-color="#74b9ff" stop-opacity="0.25"/>
+                                        <stop offset="100%" stop-color="#74b9ff" stop-opacity="0"/>
+                                    </radialGradient>
+                                </defs>
+                                <circle cx="30" cy="30" r="25" fill="url(#snowGlow)"/>
+                                <!-- Snowflake behind character -->
+                                <g opacity="0.4">
+                                    <path d="M30 8 L30 52 M14 20 L46 40 M46 20 L14 40" stroke="#74b9ff" stroke-width="1.5"/>
+                                    <path d="M30 14 L27 11 M30 14 L33 11 M30 46 L27 49 M30 46 L33 49" stroke="#74b9ff" stroke-width="1"/>
+                                    <path d="M19 23 L16 22 M19 23 L18 26 M41 37 L44 38 M41 37 L42 34" stroke="#74b9ff" stroke-width="1"/>
+                                </g>
+                                <!-- Shoveler character -->
+                                <!-- Body (winter coat) -->
+                                <rect x="24" y="28" width="12" height="16" rx="2" fill="#5c7090"/>
+                                <!-- Head -->
+                                <circle cx="30" cy="23" r="6" fill="#e8c4a0"/>
+                                <!-- Winter hat -->
+                                <rect x="24" y="15" width="12" height="6" rx="1" fill="#c04040"/>
+                                <rect x="23" y="20" width="14" height="3" fill="#e8e8e8"/>
+                                <!-- Pom pom -->
+                                <circle cx="30" y="14" r="2.5" fill="#e8e8e8"/>
+                                <!-- Eyes -->
+                                <rect x="27" y="21" width="2" height="2" fill="#202020"/>
+                                <rect x="31" y="21" width="2" height="2" fill="#202020"/>
+                                <!-- Shovel -->
+                                <rect x="38" y="20" width="2" height="20" fill="#8b6914"/>
+                                <rect x="36" y="38" width="8" height="5" rx="1" fill="#606060"/>
+                                <!-- Snow pile being shoveled -->
+                                <ellipse cx="44" cy="46" rx="8" ry="4" fill="#e8eef4"/>
+                                <ellipse cx="44" cy="44" rx="6" ry="3" fill="#f0f4f8"/>
+                            </svg>
+                        </div>
+                        <div class="card-title">Cold Drift</div>
+                        <div class="card-subtitle">keep the paths clear</div>
                     </div>
                 </div>
             </a>
