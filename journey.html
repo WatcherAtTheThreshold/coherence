@@ -87,7 +87,7 @@
             height: 400px;
             position: relative;
             transform-style: preserve-3d;
-            transition: transform 1.2s ease;
+            transition: transform 1.8s cubic-bezier(0.25, 0.1, 0.25, 1);
             cursor: pointer;
         }
 
@@ -302,22 +302,40 @@
             height: 240px;
             position: relative;
             transform-style: preserve-3d;
-            transition: transform 0.8s ease;
+            transition: transform 1.4s cubic-bezier(0.25, 0.1, 0.25, 1),
+                        opacity 1.2s ease;
             cursor: pointer;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .story-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+            transition: transform 1.2s cubic-bezier(0.22, 0.61, 0.36, 1),
+                        opacity 1s ease;
         }
 
         .story-card.flipped {
             transform: rotateY(180deg);
         }
 
+        .story-card.visible.flipped {
+            transform: translateY(0) rotateY(180deg);
+        }
+
         .story-card.selected {
             transform: rotateY(180deg) scale(1.05);
             z-index: 10;
+            transition: transform 1.4s cubic-bezier(0.25, 0.1, 0.25, 1),
+                        opacity 1.2s ease;
         }
 
         .story-card.faded {
-            opacity: 0.3;
+            opacity: 0.15;
             pointer-events: none;
+            transition: transform 1.4s cubic-bezier(0.25, 0.1, 0.25, 1),
+                        opacity 1s ease 0.3s;
         }
 
         .card-face {
@@ -449,7 +467,7 @@
             margin-bottom: 0.75rem;
             padding-bottom: 0.75rem;
             border-bottom: 1px solid rgba(212, 165, 116, 0.1);
-            animation: fadeIn 0.5s ease;
+            animation: fadeIn 1s ease;
         }
 
         .story-entry:last-child {
@@ -480,7 +498,7 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
+            from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
@@ -854,11 +872,14 @@
             // Hide overlay
             document.getElementById('start-overlay').classList.add('hidden');
 
-            // Start the game
+            // Start the game with gentle pacing
             setTimeout(() => {
                 drawCards();
+            }, 1000);
+
+            setTimeout(() => {
                 wizardSpeak(randomFrom(DIALOGUE.start));
-            }, 500);
+            }, 1800);
         }
 
         // ============================================
@@ -968,14 +989,16 @@
 
                 container.appendChild(cardEl);
 
-                // Stagger animation
+                // Stagger entrance animation with longer delays
                 setTimeout(() => {
-                    cardEl.style.opacity = '1';
-                    cardEl.style.transform = 'translateY(0)';
-                }, index * 150);
+                    cardEl.classList.add('visible');
+                }, 100 + index * 300);
             });
 
-            setWizardMood('curious');
+            // Wizard becomes curious after cards appear
+            setTimeout(() => {
+                setWizardMood('curious');
+            }, 600);
         }
 
         function selectCard(index) {
@@ -996,17 +1019,21 @@
             updateCoherence(selected);
             addToStoryLog(selected);
 
-            // Wizard reacts
+            // Wizard reacts after card flip completes
             const reaction = getWizardReaction(selected);
+            setTimeout(() => {
+                setWizardMood('thinking');
+            }, 800);
+
             setTimeout(() => {
                 wizardSpeak(reaction.text);
                 setWizardMood(reaction.mood);
-            }, 500);
+            }, 1600);
 
-            // Draw new cards after delay
+            // Draw new cards after longer delay for smooth pacing
             setTimeout(() => {
                 drawCards();
-            }, 2500);
+            }, 4000);
         }
 
         // ============================================
@@ -1104,9 +1131,16 @@
             log.innerHTML = '<p class="story-empty">Your story will unfold here...</p>';
             document.getElementById('story-count').textContent = '0 cards';
 
-            drawCards();
-            wizardSpeak(randomFrom(DIALOGUE.start));
+            // Gentle reset with calm wizard
             setWizardMood('calm');
+
+            setTimeout(() => {
+                drawCards();
+            }, 400);
+
+            setTimeout(() => {
+                wizardSpeak(randomFrom(DIALOGUE.start));
+            }, 1200);
         }
 
         // ============================================
