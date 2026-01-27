@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beep</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500&family=Noto+Serif+JP:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            font-family: 'Noto Sans JP', sans-serif;
+            background: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 100%);
+            color: #2d3436;
+            overflow-x: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+             .mist-overlay {
+      background: url('images/mist-overlay.png') repeat;
+      opacity: 0.9;
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      animation: mistScroll 120s linear infinite;
+    }
+
+        .beep-container {
+            max-width: 500px;
+            width: 90%;
+            height: 90%;
+            background: #ffffff;
+            border-radius: 2px;
+            padding: 3rem 2rem;
+            box-shadow: 
+                0 2px 8px rgba(0, 0, 0, 0.04),
+                0 8px 24px rgba(0, 0, 0, 0.08);
+            position: relative;
+            border-top: 3px solid #636e72;
+        }
+
+        .beep-title {
+            font-family: 'Noto Serif JP', serif;
+            font-size: 1.5rem;
+            font-weight: 300;
+            text-align: center;
+            color: #2d3436;
+            margin-bottom: 3rem;
+            letter-spacing: 0.15em;
+        }
+
+        .led-display {
+            display: grid;
+            grid-template-columns: repeat(16, 1fr);
+            gap: 4px;
+            background: #f8f9fa;
+            padding: 24px;
+            border-radius: 2px;
+            margin-bottom: 3rem;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+            border: 1px solid #dfe6e9;
+        }
+
+        .led {
+            aspect-ratio: 1;
+            border-radius: 50%;
+            background: #e9ecef;
+            transition: all 0.3s ease;
+        }
+
+        .led.on {
+            background: var(--led-color, #636e72);
+            box-shadow: 0 0 8px var(--led-color, #636e72);
+        }
+
+        .message-box {
+            background: #f8f9fa;
+            border-left: 3px solid #636e72;
+            padding: 2rem;
+            min-height: 120px;
+            color: #2d3436;
+            font-size: 1.1rem;
+            line-height: 1.8;
+            margin-bottom: 3rem;
+            font-weight: 300;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .mic-button-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .mic-button {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: #636e72;
+            border: none;
+            color: white;
+            font-size: 2.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 
+                0 4px 12px rgba(99, 110, 114, 0.3),
+                0 8px 24px rgba(99, 110, 114, 0.15);
+        }
+
+        .mic-button:hover {
+            background: #2d3436;
+            transform: translateY(-2px);
+            box-shadow: 
+                0 6px 16px rgba(99, 110, 114, 0.4),
+                0 12px 32px rgba(99, 110, 114, 0.2);
+        }
+
+        .mic-button:active {
+            transform: translateY(0);
+        }
+
+        .mic-button.listening {
+            background: #d63031;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 
+                    0 4px 12px rgba(214, 48, 49, 0.4),
+                    0 8px 24px rgba(214, 48, 49, 0.2),
+                    0 0 0 0 rgba(214, 48, 49, 0.4);
+            }
+            50% {
+                box-shadow: 
+                    0 4px 12px rgba(214, 48, 49, 0.4),
+                    0 8px 24px rgba(214, 48, 49, 0.2),
+                    0 0 0 20px rgba(214, 48, 49, 0);
+            }
+        }
+
+        .mic-label {
+            font-size: 0.9rem;
+            color: #636e72;
+            font-weight: 300;
+            letter-spacing: 0.05em;
+        }
+
+        .status-indicator {
+            height: 4px;
+            width: 60px;
+            background: #dfe6e9;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .status-indicator-bar {
+            height: 100%;
+            width: 0%;
+            background: #636e72;
+            transition: width 0.3s ease;
+        }
+
+        .status-indicator-bar.active {
+            width: 100%;
+            background: #d63031;
+        }
+
+        @media (max-width: 768px) {
+            .beep-container {
+                padding: 2rem 1.5rem;
+            }
+
+            .beep-title {
+                font-size: 1.3rem;
+                margin-bottom: 2rem;
+            }
+
+            .led-display {
+                gap: 3px;
+                padding: 20px;
+                margin-bottom: 2rem;
+            }
+
+            .message-box {
+                padding: 1.5rem;
+                min-height: 100px;
+                font-size: 1rem;
+                margin-bottom: 2rem;
+            }
+
+            .mic-button {
+                width: 100px;
+                height: 100px;
+                font-size: 2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .beep-container {
+                width: 95%;
+                padding: 1.5rem 1rem;
+            }
+
+            .led-display {
+                max-width: 300px;
+                gap: 2px;
+                padding: 16px;
+            }
+        }
+
+        #startOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.98);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        #startOverlay h2 {
+            font-family: 'Noto Serif JP', serif;
+            font-size: 2rem;
+            font-weight: 300;
+            color: #2d3436;
+            letter-spacing: 0.1em;
+        }
+
+        #startOverlay button {
+            background: #636e72;
+            border: none;
+            color: white;
+            padding: 1.25rem 3rem;
+            border-radius: 2px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-family: 'Noto Sans JP', sans-serif;
+            letter-spacing: 0.1em;
+            transition: all 0.3s ease;
+            box-shadow: 
+                0 4px 12px rgba(99, 110, 114, 0.3),
+                0 8px 24px rgba(99, 110, 114, 0.15);
+        }
+
+        #startOverlay button:hover {
+            background: #2d3436;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div id="startOverlay">
+        <h2>Wake Beep?</h2>
+        <button onclick="wakeBeep()">Start</button>
+    </div>
+ <div class="mist-overlay"></div>
+    <div class="beep-container">
+        <h1 class="beep-title"></h1>
+        
+        <div class="led-display" id="ledDisplay"></div>
+        
+        <div class="message-box" id="messageBox">
+            Hello! I'm Beep.
+        </div>
+        
+        <div class="mic-button-container">
+            <button class="mic-button" id="micButton" onclick="toggleMic()">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                    <line x1="12" y1="19" x2="12" y2="23"></line>
+                    <line x1="8" y1="23" x2="16" y2="23"></line>
+                </svg>
+            </button>
+            <span class="mic-label" id="micLabel">Tap to speak</span>
+            <div class="status-indicator">
+                <div class="status-indicator-bar" id="statusBar"></div>
+            </div>
+        </div>
+    </div>
+
+   <script>
+    // Create LED grid
+    const display = document.getElementById('ledDisplay');
+    const leds = [];
+    for (let i = 0; i < 256; i++) {
+        const led = document.createElement('div');
+        led.className = 'led';
+        display.appendChild(led);
+        leds.push(led);
+    }
+
+    // LED Face patterns
+    const faces = {
+        happy: {
+            pattern: [
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+                0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+                0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,
+                0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,
+                0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,
+                0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,
+                0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+            ],
+            color: '#636e72'
+        },
+        thinking: {
+            pattern: [
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+                0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+                0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,
+                0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+            ],
+            color: '#b2bec3'
+        },
+        excited: {
+            pattern: [
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,1,1,1,0,0,0,0,1,1,1,0,0,0,
+                0,0,0,1,1,1,0,0,0,0,1,1,1,0,0,0,
+                0,0,0,1,1,1,0,0,0,0,1,1,1,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0,
+                0,0,1,1,0,0,0,0,0,0,0,0,1,1,0,0,
+                0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+                0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0,
+                0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,
+                0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+            ],
+            color: '#636e72'
+        },
+        sleeping: {
+            pattern: [
+                0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,
+                0,0,0,1,1,1,1,0,0,0,1,1,0,0,0,0,
+                0,0,0,1,1,1,1,0,0,1,1,0,0,0,0,0,
+                0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,
+                0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,
+                0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+            ],
+            color: '#b2bec3'
+        },
+        // Talking frames for mouth animation
+        talk1: {
+            pattern: [
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+                0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+                0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,
+                0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+            ],
+            color: '#636e72'
+        },
+        talk2: {
+            pattern: [
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+                0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+                0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,
+                0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,
+                0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,
+                0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+            ],
+            color: '#636e72'
+        },
+        talk3: {
+            pattern: [
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+                0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+                0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,
+                0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,
+                0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,
+                0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,
+                0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,
+                0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+            ],
+            color: '#636e72'
+        },
+        talk4: {
+            pattern: [
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+                0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+                0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+            ],
+            color: '#636e72'
+        }
+    };
+
+    // Talking animation variables
+    const talkingFrames = ['talk1', 'talk2', 'talk3', 'talk4', 'talk3', 'talk2'];
+    let talkingInterval = null;
+    let currentTalkFrame = 0;
+
+    function startTalking() {
+        if (talkingInterval) return;
+        currentTalkFrame = 0;
+        talkingInterval = setInterval(() => {
+            setMood(talkingFrames[currentTalkFrame]);
+            currentTalkFrame = (currentTalkFrame + 1) % talkingFrames.length;
+        }, 120);
+    }
+
+    function stopTalking() {
+        if (talkingInterval) {
+            clearInterval(talkingInterval);
+            talkingInterval = null;
+        }
+        setMood('happy');
+    }
+
+    function wakeBeep() {
+        // Initialize audio context with a silent utterance
+        if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance('');
+            window.speechSynthesis.speak(utterance);
+        }
+        
+        // Fade out and remove overlay
+        const overlay = document.getElementById('startOverlay');
+        overlay.style.transition = 'opacity 0.5s ease';
+        overlay.style.opacity = '0';
+        
+        setTimeout(() => {
+            overlay.remove();
+        }, 500);
+        
+        // Have Beep greet you
+        setTimeout(() => {
+            const greeting = "Hello friend";
+            document.getElementById('messageBox').textContent = greeting;
+            speak(greeting);
+        }, 800);
+    }   
+
+    function setMood(mood) {
+        const face = faces[mood];
+        if (!face) return;
+
+        face.pattern.forEach((state, index) => {
+            if (state === 1) {
+                leds[index].classList.add('on');
+                leds[index].style.setProperty('--led-color', face.color);
+            } else {
+                leds[index].classList.remove('on');
+            }
+        });
+    }
+
+    // Speech Recognition Setup
+    let recognition;
+    let isListening = false;
+
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+
+        recognition.onstart = () => {
+            isListening = true;
+            document.getElementById('micButton').classList.add('listening');
+            document.getElementById('micLabel').textContent = 'Listening...';
+            document.getElementById('statusBar').classList.add('active');
+            setMood('thinking');
+        };
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            sendMessage(transcript);
+        };
+
+        recognition.onerror = (event) => {
+            console.error('Speech recognition error:', event.error);
+            document.getElementById('micButton').classList.remove('listening');
+            document.getElementById('micLabel').textContent = 'Tap to speak';
+            document.getElementById('statusBar').classList.remove('active');
+            isListening = false;
+        };
+
+        recognition.onend = () => {
+            document.getElementById('micButton').classList.remove('listening');
+            document.getElementById('micLabel').textContent = 'Tap to speak';
+            document.getElementById('statusBar').classList.remove('active');
+            isListening = false;
+        };
+    }
+
+    function toggleMic() {
+        if (!recognition) {
+            alert('Speech recognition not supported in this browser. Try Chrome or Safari!');
+            return;
+        }
+
+        if (isListening) {
+            recognition.stop();
+        } else {
+            recognition.start();
+        }
+    }
+
+    // Text-to-Speech
+    function speak(text) {
+        if ('speechSynthesis' in window) {
+            // Cancel any ongoing speech
+            window.speechSynthesis.cancel();
+            stopTalking();
+
+            const utterance = new SpeechSynthesisUtterance(text);
+
+            // Voice settings for a friendly robot vibe
+            utterance.rate = 0.9;
+            utterance.pitch = 1.1;
+            utterance.volume = 1.0;
+
+            // Try to use a more robotic/synthetic voice if available
+            const voices = window.speechSynthesis.getVoices();
+            const preferredVoice = voices.find(voice =>
+                voice.name.includes('Google') || voice.name.includes('Microsoft')
+            );
+            if (preferredVoice) {
+                utterance.voice = preferredVoice;
+            }
+
+            // Start mouth animation when speech begins
+            utterance.onstart = () => {
+                startTalking();
+            };
+
+            // Stop mouth animation when speech ends
+            utterance.onend = () => {
+                stopTalking();
+            };
+
+            // Also handle errors and pauses
+            utterance.onerror = () => {
+                stopTalking();
+            };
+
+            window.speechSynthesis.speak(utterance);
+        }
+    }
+
+    async function sendMessage(message) {
+        const messageBox = document.getElementById('messageBox');
+        
+        if (!message) return;
+
+        setMood('thinking');
+        messageBox.textContent = 'Thinking...';
+        document.getElementById('micButton').disabled = true;
+
+        try {
+            const response = await fetch('https://sigil-oracle-server.onrender.com/grumbot', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message })
+            });
+            
+            const data = await response.json();
+            const beepResponse = data.response || data.error;
+
+            messageBox.textContent = beepResponse;
+            setMood('happy');
+
+            // Speak the response
+            speak(beepResponse);
+            
+        } catch (err) {
+            const errorMsg = 'Oops! Something went wrong.';
+            messageBox.textContent = errorMsg;
+            speak(errorMsg);
+            setMood('thinking');
+        }
+
+        document.getElementById('micButton').disabled = false;
+    }
+
+    // Load voices (needed for some browsers)
+    window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+    };
+
+    // Start with happy face
+    setMood('sleeping');
+       
+</script>
+</body>
+</html>
