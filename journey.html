@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JOURNEY</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Cormorant+Garamond:wght@400;500;600&display=swap');
+
+        :root {
+            --void: #0a0a0f;
+            --earth-deep: #1a1612;
+            --text-dim: #5a5550;
+            --text-mid: #8a8580;
+            --text-bright: #d4cdc0;
+            --accent-gold: #d4a574;
+            --accent-warm: #c07050;
+            --card-bg: #1e1c1a;
+            --card-border: rgba(212, 165, 116, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'IBM Plex Mono', monospace;
+            background: linear-gradient(180deg, var(--void) 0%, var(--earth-deep) 100%);
+            color: var(--text-bright);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem;
+            position: relative;
+        }
+
+        /* Subtle texture */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.02'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ========== START OVERLAY (Card Style) ========== */
+        #start-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, var(--void) 0%, var(--earth-deep) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            perspective: 1200px;
+        }
+
+        #start-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1s ease 0.5s;
+        }
+
+        .start-card {
+            width: 280px;
+            height: 400px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 1.2s ease;
+            cursor: pointer;
+        }
+
+        .start-card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .start-card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--card-border);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .start-card-front {
+            background: linear-gradient(160deg, var(--card-bg) 0%, #141210 50%, #1a1816 100%);
+        }
+
+        .start-card-front h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2.5rem;
+            font-weight: 400;
+            letter-spacing: 0.4rem;
+            color: var(--accent-gold);
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 10px rgba(212, 165, 116, 0.3);
+        }
+
+        .start-card-front p {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            font-style: italic;
+            letter-spacing: 0.1rem;
+            margin-bottom: 2rem;
+        }
+
+        .start-card-front .begin-text {
+            font-size: 0.75rem;
+            color: var(--text-mid);
+            letter-spacing: 0.15rem;
+            text-transform: lowercase;
+            animation: gentlePulse 3s ease-in-out infinite;
+        }
+
+        .start-card-back {
+            background: linear-gradient(160deg, #1a1816 0%, var(--card-bg) 50%, #141210 100%);
+            transform: rotateY(180deg);
+            padding: 1.5rem;
+        }
+
+        /* Small wizard on card back */
+        .mini-wizard-container {
+            margin-bottom: 1rem;
+        }
+
+        .mini-wizard-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 2px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px;
+            border-radius: 4px;
+            width: 120px;
+            height: 120px;
+        }
+
+        .mini-led {
+            aspect-ratio: 1;
+            border-radius: 50%;
+            background: #1a1a1a;
+            transition: all 0.3s ease;
+        }
+
+        .mini-led.on {
+            background: var(--accent-gold);
+            box-shadow: 0 0 4px var(--accent-gold);
+        }
+
+        .start-card-back .welcome-text {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.1rem;
+            color: var(--text-bright);
+            text-align: center;
+            line-height: 1.8;
+            font-style: italic;
+        }
+
+        .start-card-back .continue-btn {
+            margin-top: 1.5rem;
+            background: transparent;
+            border: 1px solid var(--accent-gold);
+            color: var(--accent-gold);
+            padding: 0.6rem 1.5rem;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.75rem;
+            letter-spacing: 0.15rem;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .start-card-back .continue-btn:hover {
+            background: var(--accent-gold);
+            color: var(--void);
+        }
+
+        @keyframes gentlePulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* ========== HEADER ========== */
+        header {
+            text-align: center;
+            padding: 1rem 0;
+        }
+
+        h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            font-weight: 400;
+            letter-spacing: 0.4rem;
+            color: var(--text-bright);
+            opacity: 0.9;
+        }
+
+        .subtitle {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            letter-spacing: 0.2rem;
+            font-style: italic;
+            margin-top: 0.3rem;
+        }
+
+        /* ========== WIZARD DISPLAY ========== */
+        .wizard-section {
+            display: flex;
+            align-items: flex-start;
+            gap: 1.5rem;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .wizard-container {
+            flex-shrink: 0;
+        }
+
+        .wizard-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 3px;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid rgba(212, 165, 116, 0.2);
+        }
+
+        .led {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #1a1a1a;
+            transition: all 0.3s ease;
+        }
+
+        .led.on {
+            background: var(--led-color, var(--accent-gold));
+            box-shadow: 0 0 6px var(--led-color, var(--accent-gold));
+        }
+
+        .wizard-speech {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 2px solid var(--accent-gold);
+            padding: 1rem 1.25rem;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .wizard-speech p {
+            font-size: 0.9rem;
+            line-height: 1.7;
+            color: var(--text-bright);
+            font-style: italic;
+        }
+
+        /* ========== CARDS ========== */
+        .cards-section {
+            width: 100%;
+            max-width: 700px;
+        }
+
+        .cards-container {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            perspective: 1200px;
+            min-height: 260px;
+        }
+
+        .story-card {
+            width: 160px;
+            height: 240px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.8s ease;
+            cursor: pointer;
+        }
+
+        .story-card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .story-card.selected {
+            transform: rotateY(180deg) scale(1.05);
+            z-index: 10;
+        }
+
+        .story-card.faded {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 12px;
+            border: 2px solid var(--card-border);
+            overflow: hidden;
+        }
+
+        .card-front {
+            background: linear-gradient(160deg, var(--card-bg) 0%, #141210 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card-front::before {
+            content: '?';
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 3rem;
+            color: var(--accent-gold);
+            opacity: 0.4;
+        }
+
+        .card-back {
+            background: linear-gradient(160deg, #fffef7 0%, #f8f4e6 100%);
+            transform: rotateY(180deg);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            color: #3b2f2f;
+        }
+
+        .card-type {
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15rem;
+            color: #7b4e2d;
+            margin-bottom: 0.5rem;
+            opacity: 0.7;
+        }
+
+        .card-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #5d4e37;
+            margin-bottom: 0.75rem;
+            line-height: 1.3;
+        }
+
+        .card-text {
+            font-size: 0.75rem;
+            line-height: 1.6;
+            color: #6b5845;
+            flex: 1;
+        }
+
+        .card-tone {
+            font-size: 0.55rem;
+            text-transform: lowercase;
+            color: #a08060;
+            font-style: italic;
+            margin-top: auto;
+            padding-top: 0.5rem;
+            border-top: 1px solid rgba(0,0,0,0.1);
+        }
+
+        /* Card type colors */
+        .story-card[data-role="character"] .card-type { color: #6b8e7d; }
+        .story-card[data-role="place"] .card-type { color: #7d8e6b; }
+        .story-card[data-role="action"] .card-type { color: #8e6b6b; }
+        .story-card[data-role="object"] .card-type { color: #8e7d6b; }
+        .story-card[data-role="tone"] .card-type { color: #6b7d8e; }
+
+        /* ========== STORY LOG ========== */
+        .story-section {
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .story-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .story-header h3 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1rem;
+            font-weight: 400;
+            color: var(--text-mid);
+            letter-spacing: 0.15rem;
+        }
+
+        .story-count {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+        }
+
+        .story-log {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(212, 165, 116, 0.15);
+            border-radius: 6px;
+            padding: 1.25rem;
+            min-height: 120px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .story-log::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .story-log::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .story-log::-webkit-scrollbar-thumb {
+            background: var(--text-dim);
+            border-radius: 2px;
+        }
+
+        .story-entry {
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid rgba(212, 165, 116, 0.1);
+            animation: fadeIn 0.5s ease;
+        }
+
+        .story-entry:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .story-entry-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 0.95rem;
+            color: var(--accent-gold);
+            margin-bottom: 0.25rem;
+        }
+
+        .story-entry-text {
+            font-size: 0.8rem;
+            color: var(--text-mid);
+            line-height: 1.5;
+        }
+
+        .story-empty {
+            color: var(--text-dim);
+            font-style: italic;
+            font-size: 0.8rem;
+            text-align: center;
+            padding: 2rem 0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ========== CONTROLS ========== */
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .control-btn {
+            background: transparent;
+            border: 1px solid var(--text-dim);
+            color: var(--text-dim);
+            padding: 0.5rem 1.25rem;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.7rem;
+            letter-spacing: 0.1rem;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 600px) {
+            .wizard-section {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .wizard-speech {
+                border-left: none;
+                border-top: 2px solid var(--accent-gold);
+                border-radius: 0 0 6px 6px;
+                width: 100%;
+            }
+
+            .cards-container {
+                flex-wrap: wrap;
+            }
+
+            .story-card {
+                width: 140px;
+                height: 210px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Start Overlay (Card Style) -->
+    <div id="start-overlay">
+        <div class="start-card" id="start-card" onclick="flipStartCard()">
+            <div class="start-card-face start-card-front">
+                <h2>Journey</h2>
+                <p>a story unfolds</p>
+                <span class="begin-text">tap to begin</span>
+            </div>
+            <div class="start-card-face start-card-back">
+                <div class="mini-wizard-container">
+                    <div class="mini-wizard-grid" id="mini-wizard-grid"></div>
+                </div>
+                <p class="welcome-text">
+                    "Hello, traveler.<br>
+                    I am here to witness<br>
+                    the story you will tell."
+                </p>
+                <button class="continue-btn" onclick="startGame(event)">enter</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Journey</h1>
+            <div class="subtitle">build a story, one card at a time</div>
+        </header>
+
+        <!-- Wizard Display -->
+        <section class="wizard-section">
+            <div class="wizard-container">
+                <div class="wizard-grid" id="wizard-grid"></div>
+            </div>
+            <div class="wizard-speech">
+                <p id="wizard-text">Choose a card to begin your story.</p>
+            </div>
+        </section>
+
+        <!-- Cards -->
+        <section class="cards-section">
+            <div class="cards-container" id="cards-container"></div>
+        </section>
+
+        <!-- Story Log -->
+        <section class="story-section">
+            <div class="story-header">
+                <h3>Your Story</h3>
+                <span class="story-count" id="story-count">0 cards</span>
+            </div>
+            <div class="story-log" id="story-log">
+                <p class="story-empty">Your story will unfold here...</p>
+            </div>
+        </section>
+
+        <!-- Controls -->
+        <div class="controls">
+            <button class="control-btn" id="tts-toggle" onclick="toggleTTS()">voice: on</button>
+            <button class="control-btn" onclick="newStory()">new story</button>
+        </div>
+    </div>
+
+    <audio id="music" loop>
+        <source src="music/jaunt.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // ============================================
+        // CARD DATA
+        // ============================================
+        const CARDS = [
+            // CHARACTER cards
+            { id: 1, role: 'character', title: 'The Wanderer', text: 'A figure appears on the path, their cloak heavy with distance traveled.', tone: 'calm', theme: 'journey', weight: 'light' },
+            { id: 2, role: 'character', title: 'The Child', text: 'Small hands reach out, curious eyes reflecting starlight.', tone: 'warm', theme: 'home', weight: 'light' },
+            { id: 3, role: 'character', title: 'The Keeper', text: 'Someone who has tended this place longer than memory serves.', tone: 'calm', theme: 'nature', weight: 'heavy' },
+            { id: 4, role: 'character', title: 'The Echo', text: 'A presence felt more than seen, like a voice from long ago.', tone: 'strange', theme: 'mystery', weight: 'heavy' },
+            { id: 5, role: 'character', title: 'The Companion', text: 'A creature of few words but steady presence walks alongside.', tone: 'warm', theme: 'journey', weight: 'light' },
+            { id: 6, role: 'character', title: 'The Builder', text: 'Hands that shape the world, one careful piece at a time.', tone: 'hopeful', theme: 'machine', weight: 'light' },
+
+            // PLACE cards
+            { id: 7, role: 'place', title: 'The Threshold', text: 'A doorway stands where none should be, patient and waiting.', tone: 'strange', theme: 'mystery', weight: 'heavy' },
+            { id: 8, role: 'place', title: 'The Garden', text: 'Things grow here that have forgotten how to be still.', tone: 'calm', theme: 'nature', weight: 'light' },
+            { id: 9, role: 'place', title: 'The Hearth', text: 'Warmth radiates from stones that remember every story told beside them.', tone: 'warm', theme: 'home', weight: 'light' },
+            { id: 10, role: 'place', title: 'The Ruins', text: 'What was built here served a purpose now lost to knowing.', tone: 'tense', theme: 'machine', weight: 'heavy' },
+            { id: 11, role: 'place', title: 'The Crossroads', text: 'Every direction holds a different question.', tone: 'hopeful', theme: 'journey', weight: 'light' },
+            { id: 12, role: 'place', title: 'The Deep Woods', text: 'Shadows stack upon shadows, yet something glows softly ahead.', tone: 'strange', theme: 'nature', weight: 'heavy' },
+
+            // ACTION cards
+            { id: 13, role: 'action', title: 'A Gift Given', text: 'Something precious changes hands without expectation of return.', tone: 'warm', theme: 'home', weight: 'light' },
+            { id: 14, role: 'action', title: 'A Door Opens', text: 'What was sealed now yields, revealing what lies beyond.', tone: 'hopeful', theme: 'mystery', weight: 'light' },
+            { id: 15, role: 'action', title: 'A Memory Surfaces', text: 'The past arrives unbidden, clear as morning water.', tone: 'tense', theme: 'journey', weight: 'heavy' },
+            { id: 16, role: 'action', title: 'Something Breaks', text: 'In the breaking, a new shape becomes possible.', tone: 'tense', theme: 'machine', weight: 'heavy' },
+            { id: 17, role: 'action', title: 'Roots Take Hold', text: 'What was temporary becomes permanent, for better or worse.', tone: 'calm', theme: 'nature', weight: 'light' },
+            { id: 18, role: 'action', title: 'A Promise Made', text: 'Words spoken that bind the future to this moment.', tone: 'hopeful', theme: 'home', weight: 'heavy' },
+
+            // OBJECT cards
+            { id: 19, role: 'object', title: 'The Lantern', text: 'It holds light that does not flicker, even in wind.', tone: 'hopeful', theme: 'journey', weight: 'light' },
+            { id: 20, role: 'object', title: 'The Key', text: 'What it opens has yet to be found.', tone: 'strange', theme: 'mystery', weight: 'light' },
+            { id: 21, role: 'object', title: 'The Letter', text: 'Words written long ago, still waiting to be read.', tone: 'tense', theme: 'home', weight: 'heavy' },
+            { id: 22, role: 'object', title: 'The Seed', text: 'Small enough to forget, patient enough to wait centuries.', tone: 'calm', theme: 'nature', weight: 'light' },
+            { id: 23, role: 'object', title: 'The Compass', text: 'It points to something other than north.', tone: 'strange', theme: 'machine', weight: 'light' },
+            { id: 24, role: 'object', title: 'The Stone', text: 'Worn smooth by countless hands seeking comfort.', tone: 'warm', theme: 'journey', weight: 'light' },
+
+            // TONE cards
+            { id: 25, role: 'tone', title: 'A Hush Falls', text: 'The world grows quiet, listening for what comes next.', tone: 'calm', theme: 'mystery', weight: 'light' },
+            { id: 26, role: 'tone', title: 'Dawn Approaches', text: 'The sky remembers color after forgetting it all night.', tone: 'hopeful', theme: 'nature', weight: 'light' },
+            { id: 27, role: 'tone', title: 'Shadows Lengthen', text: 'The familiar becomes strange as light retreats.', tone: 'tense', theme: 'mystery', weight: 'heavy' },
+            { id: 28, role: 'tone', title: 'Rain Begins', text: 'The world softens, edges blurring into gentleness.', tone: 'calm', theme: 'nature', weight: 'light' },
+            { id: 29, role: 'tone', title: 'A Fire Crackles', text: 'Warmth blooms in the dark, drawing all closer.', tone: 'warm', theme: 'home', weight: 'light' },
+            { id: 30, role: 'tone', title: 'Wind Stirs', text: 'Something is changing, carried on the moving air.', tone: 'strange', theme: 'journey', weight: 'light' }
+        ];
+
+        // ============================================
+        // WIZARD DIALOGUE
+        // ============================================
+        const DIALOGUE = {
+            start: [
+                "Choose a card to begin your story.",
+                "Three paths await. Which calls to you?",
+                "The story begins with a single choice."
+            ],
+            // Reactions by tone
+            calm: [
+                "The story breathes softly now.",
+                "A gentle thread weaves through.",
+                "Peace settles into the narrative."
+            ],
+            warm: [
+                "Warmth enters the telling.",
+                "Something kind has arrived.",
+                "The story grows gentler."
+            ],
+            hopeful: [
+                "Light finds its way in.",
+                "The path ahead brightens.",
+                "Hope threads through your words."
+            ],
+            tense: [
+                "The story tightens here.",
+                "Something shifts beneath.",
+                "Weight gathers in the telling."
+            ],
+            strange: [
+                "The familiar bends.",
+                "Mystery seeps through.",
+                "The story reaches somewhere new."
+            ],
+            // Reactions by pattern
+            themeRepeat: [
+                "A thread returns.",
+                "The story remembers itself.",
+                "Echoes form patterns."
+            ],
+            toneShift: [
+                "The color changes.",
+                "The story turns a corner.",
+                "A new feeling arrives."
+            ],
+            roleBalance: [
+                "The story finds balance.",
+                "All pieces have their place.",
+                "The weave grows richer."
+            ]
+        };
+
+        // ============================================
+        // GAME STATE
+        // ============================================
+        const game = {
+            story: [],
+            currentCards: [],
+            cardIndex: 0,
+            ttsEnabled: true,
+            coherence: {
+                themes: {},
+                tones: {},
+                roles: {},
+                lastTone: null
+            }
+        };
+
+        // ============================================
+        // WIZARD LED PATTERNS (10x10)
+        // ============================================
+        const WIZARD_FACES = {
+            calm: {
+                pattern: [
+                    0,0,0,0,0,0,0,0,0,0,
+                    0,0,0,0,0,0,0,0,0,0,
+                    0,0,1,1,0,0,1,1,0,0,
+                    0,0,1,1,0,0,1,1,0,0,
+                    0,0,0,0,0,0,0,0,0,0,
+                    0,0,0,0,0,0,0,0,0,0,
+                    0,0,0,0,0,0,0,0,0,0,
+                    0,0,1,1,1,1,1,1,0,0,
+                    0,0,0,0,0,0,0,0,0,0,
+                    0,0,0,0,0,0,0,0,0,0
+                ],
+                color: '#d4a574'
+            },
+            curious: {
+                pattern: [
+                    0,0,0,0,0,0,0,0,0,0,
+                    0,0,1,1,0,0,1,1,0,0,
+                    0,0,1,1,0,0,1,1,0,0,
+                    0,0,1,1,0,0,1,1,0,0,
+                    0,0,0,0,0,0,0,0,0,0,
+                    0,0,0,0,0,0,0,0,0,0,
+                    0,0,0,1,1,1,1,0,0,0,
+                    0,0,1,0,0,0,0,1,0,0,
+                    0,0,0,0,0,0,0,0,0,0,
+                    0,0,0,0,0,0,0,0,0,0
+                ],
+                color: '#e8c080'
+            },
+            pleased: {
+                pattern: [
+                    0,0,0,0,0,0,0,0,0,0,
+                    0,0,0,0,0,0,0,0,0,0,
+                    0,0,1,1,0,0,1,1,0,0,
+                    0,0,1,1,0,0,1,1,0,0,
+                    0,0,0,0,0,0,0,0,0,0,
+                    0,0,0,0,0,0,0,0,0,0,
+                    0,1,0,0,0,0,0,0,1,0,
+                    0,0,1,0,0,0,0,1,0,0,
+                    0,0,0,1,1,1,1,0,0,0,
+                    0,0,0,0,0,0,0,0,0,0
+                ],
+                color: '#f0d090'
+            },
+            unsettled: {
+                pattern: [
+                    0,0,0,0,0,0,0,0,0,0,
+                    0,0,0,0,0,0,0,0,0,0,
+                    0,0,1,1,0,0,1,1,0,0,
+                    0,0,1,1,0,0,1,1,0,0,
+                    0,0,0,0,0,0,0,0,0,0,
+                    0,0,0,0,0,0,0,0,0,0,
+                    0,0,0,0,0,0,0,0,0,0,
+                    0,0,0,1,1,1,1,0,0,0,
+                    0,0,1,0,0,0,0,1,0,0,
+                    0,0,0,0,0,0,0,0,0,0
+                ],
+                color: '#b08050'
+            },
+            thinking: {
+                pattern: [
+                    0,0,0,0,0,0,0,0,0,0,
+                    0,0,0,0,0,0,0,0,0,0,
+                    0,0,1,1,0,0,1,1,0,0,
+                    0,0,1,1,0,0,1,1,0,0,
+                    0,0,0,0,0,0,0,0,0,0,
+                    0,0,0,0,0,0,0,0,0,0,
+                    0,0,0,0,0,0,0,0,0,0,
+                    0,0,0,0,1,1,0,0,0,0,
+                    0,0,0,0,0,0,1,1,0,0,
+                    0,0,0,0,0,0,0,0,0,0
+                ],
+                color: '#c09060'
+            }
+        };
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        const music = document.getElementById('music');
+        let leds = [];
+        let miniLeds = [];
+
+        function init() {
+            // Create main wizard grid
+            const wizardGrid = document.getElementById('wizard-grid');
+            for (let i = 0; i < 100; i++) {
+                const led = document.createElement('div');
+                led.className = 'led';
+                wizardGrid.appendChild(led);
+                leds.push(led);
+            }
+
+            // Create mini wizard grid for start card
+            const miniGrid = document.getElementById('mini-wizard-grid');
+            for (let i = 0; i < 100; i++) {
+                const led = document.createElement('div');
+                led.className = 'mini-led';
+                miniGrid.appendChild(led);
+                miniLeds.push(led);
+            }
+
+            setWizardMood('calm');
+            setMiniWizardMood('calm');
+        }
+
+        function flipStartCard() {
+            const card = document.getElementById('start-card');
+            if (!card.classList.contains('flipped')) {
+                card.classList.add('flipped');
+                setMiniWizardMood('pleased');
+                // Initialize TTS
+                if ('speechSynthesis' in window) {
+                    const utterance = new SpeechSynthesisUtterance('');
+                    window.speechSynthesis.speak(utterance);
+                }
+            }
+        }
+
+        function startGame(event) {
+            event.stopPropagation();
+
+            // Start music
+            music.volume = 0.3;
+            music.play().catch(err => console.log('Audio:', err));
+
+            // Hide overlay
+            document.getElementById('start-overlay').classList.add('hidden');
+
+            // Start the game
+            setTimeout(() => {
+                drawCards();
+                wizardSpeak(randomFrom(DIALOGUE.start));
+            }, 500);
+        }
+
+        // ============================================
+        // WIZARD
+        // ============================================
+        function setWizardMood(mood) {
+            const face = WIZARD_FACES[mood];
+            if (!face) return;
+
+            face.pattern.forEach((state, index) => {
+                if (state === 1) {
+                    leds[index].classList.add('on');
+                    leds[index].style.setProperty('--led-color', face.color);
+                } else {
+                    leds[index].classList.remove('on');
+                }
+            });
+        }
+
+        function setMiniWizardMood(mood) {
+            const face = WIZARD_FACES[mood];
+            if (!face) return;
+
+            face.pattern.forEach((state, index) => {
+                if (state === 1) {
+                    miniLeds[index].classList.add('on');
+                } else {
+                    miniLeds[index].classList.remove('on');
+                }
+            });
+        }
+
+        function wizardSpeak(text) {
+            document.getElementById('wizard-text').textContent = text;
+
+            if (game.ttsEnabled && 'speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 0.85;
+                utterance.pitch = 0.9;
+                utterance.volume = 0.8;
+
+                // Try to find a suitable voice
+                const voices = window.speechSynthesis.getVoices();
+                const preferred = voices.find(v =>
+                    v.name.includes('Google') || v.name.includes('Microsoft')
+                );
+                if (preferred) utterance.voice = preferred;
+
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // ============================================
+        // CARDS
+        // ============================================
+        function drawCards() {
+            const container = document.getElementById('cards-container');
+            container.innerHTML = '';
+
+            // Get 3 random cards not in story
+            const usedIds = game.story.map(c => c.id);
+            const available = CARDS.filter(c => !usedIds.includes(c.id));
+
+            if (available.length < 3) {
+                wizardSpeak("The story has gathered all its pieces. A new tale awaits.");
+                setWizardMood('pleased');
+                return;
+            }
+
+            // Shuffle and take 3
+            const shuffled = available.sort(() => Math.random() - 0.5);
+            game.currentCards = shuffled.slice(0, 3);
+
+            // Create card elements
+            game.currentCards.forEach((card, index) => {
+                const cardEl = document.createElement('div');
+                cardEl.className = 'story-card';
+                cardEl.dataset.role = card.role;
+                cardEl.dataset.index = index;
+
+                cardEl.innerHTML = `
+                    <div class="card-face card-front"></div>
+                    <div class="card-face card-back">
+                        <div class="card-type">${card.role}</div>
+                        <div class="card-title">${card.title}</div>
+                        <div class="card-text">${card.text}</div>
+                        <div class="card-tone">${card.tone} / ${card.theme}</div>
+                    </div>
+                `;
+
+                // Flip on hover
+                cardEl.addEventListener('mouseenter', () => {
+                    if (!cardEl.classList.contains('selected') && !cardEl.classList.contains('faded')) {
+                        cardEl.classList.add('flipped');
+                    }
+                });
+
+                cardEl.addEventListener('mouseleave', () => {
+                    if (!cardEl.classList.contains('selected')) {
+                        cardEl.classList.remove('flipped');
+                    }
+                });
+
+                // Select on click
+                cardEl.addEventListener('click', () => selectCard(index));
+
+                container.appendChild(cardEl);
+
+                // Stagger animation
+                setTimeout(() => {
+                    cardEl.style.opacity = '1';
+                    cardEl.style.transform = 'translateY(0)';
+                }, index * 150);
+            });
+
+            setWizardMood('curious');
+        }
+
+        function selectCard(index) {
+            const cards = document.querySelectorAll('.story-card');
+            const selected = game.currentCards[index];
+
+            // Mark selected and fade others
+            cards.forEach((card, i) => {
+                if (i === index) {
+                    card.classList.add('selected', 'flipped');
+                } else {
+                    card.classList.add('faded');
+                }
+            });
+
+            // Add to story
+            game.story.push(selected);
+            updateCoherence(selected);
+            addToStoryLog(selected);
+
+            // Wizard reacts
+            const reaction = getWizardReaction(selected);
+            setTimeout(() => {
+                wizardSpeak(reaction.text);
+                setWizardMood(reaction.mood);
+            }, 500);
+
+            // Draw new cards after delay
+            setTimeout(() => {
+                drawCards();
+            }, 2500);
+        }
+
+        // ============================================
+        // COHERENCE TRACKING
+        // ============================================
+        function updateCoherence(card) {
+            const c = game.coherence;
+
+            // Track themes
+            c.themes[card.theme] = (c.themes[card.theme] || 0) + 1;
+
+            // Track tones
+            c.tones[card.tone] = (c.tones[card.tone] || 0) + 1;
+
+            // Track roles
+            c.roles[card.role] = (c.roles[card.role] || 0) + 1;
+
+            c.lastTone = card.tone;
+        }
+
+        function getWizardReaction(card) {
+            const c = game.coherence;
+            let mood = 'calm';
+            let dialoguePool = DIALOGUE[card.tone] || DIALOGUE.calm;
+
+            // Check for theme repeat
+            if (c.themes[card.theme] > 1) {
+                dialoguePool = DIALOGUE.themeRepeat;
+                mood = 'pleased';
+            }
+
+            // Check for tone shift (if story has entries)
+            if (game.story.length > 1) {
+                const prevTone = game.story[game.story.length - 2].tone;
+                if (prevTone !== card.tone) {
+                    if (Math.random() < 0.4) {
+                        dialoguePool = DIALOGUE.toneShift;
+                        mood = 'curious';
+                    }
+                }
+            }
+
+            // Mood based on card tone
+            if (card.tone === 'warm' || card.tone === 'hopeful') mood = 'pleased';
+            if (card.tone === 'tense') mood = 'unsettled';
+            if (card.tone === 'strange') mood = 'curious';
+
+            return {
+                text: randomFrom(dialoguePool),
+                mood: mood
+            };
+        }
+
+        // ============================================
+        // STORY LOG
+        // ============================================
+        function addToStoryLog(card) {
+            const log = document.getElementById('story-log');
+
+            // Remove empty message
+            const empty = log.querySelector('.story-empty');
+            if (empty) empty.remove();
+
+            // Add entry
+            const entry = document.createElement('div');
+            entry.className = 'story-entry';
+            entry.innerHTML = `
+                <div class="story-entry-title">${card.title}</div>
+                <div class="story-entry-text">${card.text}</div>
+            `;
+            log.appendChild(entry);
+
+            // Update count
+            document.getElementById('story-count').textContent =
+                `${game.story.length} card${game.story.length !== 1 ? 's' : ''}`;
+
+            // Scroll to bottom
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // ============================================
+        // CONTROLS
+        // ============================================
+        function toggleTTS() {
+            game.ttsEnabled = !game.ttsEnabled;
+            document.getElementById('tts-toggle').textContent =
+                `voice: ${game.ttsEnabled ? 'on' : 'off'}`;
+        }
+
+        function newStory() {
+            game.story = [];
+            game.coherence = { themes: {}, tones: {}, roles: {}, lastTone: null };
+
+            const log = document.getElementById('story-log');
+            log.innerHTML = '<p class="story-empty">Your story will unfold here...</p>';
+            document.getElementById('story-count').textContent = '0 cards';
+
+            drawCards();
+            wizardSpeak(randomFrom(DIALOGUE.start));
+            setWizardMood('calm');
+        }
+
+        // ============================================
+        // UTILITIES
+        // ============================================
+        function randomFrom(arr) {
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
+        // Load voices
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = () => {
+                window.speechSynthesis.getVoices();
+            };
+        }
+
+        // Initialize
+        init();
+    </script>
+</body>
+</html>
