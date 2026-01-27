@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Standard Favicons -->
+<link rel="icon" href="images/eye_favicon.ico" type="image/x-icon" />
+<link rel="icon" href="images/eye_32x32.png" sizes="32x32" type="image/png" />
+<link rel="icon" href="images/eye_64x64.png" sizes="64x64" type="image/png" />
+<link rel="icon" href="images/eye_128x128.png" sizes="128x128" type="image/png" />
+
+<!-- Apple Touch Icon -->
+<link rel="apple-touch-icon" href="images/eye_apple_touch_180x180.png" />
+
+  
+  <title>Cards — The Second Gaze</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&family=Source+Sans+Pro:wght@300;400&display=swap" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+
+    /* Body background for entire cards page */
+    body {
+      background: linear-gradient(to bottom, #fdfcfb, #e2d1c3);
+      background-attachment: fixed;
+      color: #3b2f2f;
+      font-family: 'Crimson Text', 'Georgia', serif;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.2) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    /* Header and footer transparent to show body gradient */
+    header, footer {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    /* Cards page specific styling for main content */
+    .cards-main {
+      min-height: 80vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 1200px;
+      padding: 2rem;
+      z-index: 1;
+      position: relative;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: center;
+    }
+
+    h1.cards-title {
+      font-size: 3rem;
+      font-weight: 600;
+      letter-spacing: 2px;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(45deg, #ffd89b 0%, #19547b 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .intro {
+      margin-bottom: 2rem;
+      font-style: italic;
+      font-size: 1.2rem;
+      color: #6b5845;
+      opacity: 0.9;
+      line-height: 1.6;
+    }
+
+    .toggle-container {
+      margin-bottom: 2rem;
+    }
+
+    .toggle-button {
+      background: linear-gradient(145deg, #f4e7d3, #e6d3b7);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      padding: 0.8rem 2rem;
+      margin: 0 0.5rem;
+      font-size: 1.1rem;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 50px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+      transition: all 0.4s ease;
+      color: #5d4e37;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .toggle-button:hover {
+      background: linear-gradient(145deg, #f2dcc0, #dcc7a8);
+      transform: translateY(-2px) scale(1.05);
+      box-shadow: 0 12px 35px rgba(0,0,0,0.4);
+    }
+
+    .toggle-button.active {
+      background: linear-gradient(145deg, #dcc7a8, #c9b896);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+      transform: translateY(-1px);
+    }
+
+    .card-container {
+      perspective: 1200px;
+      margin-top: 2rem;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.8s ease-in-out;
+    }
+
+    .card-container.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .three-card-layout {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-top: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .card-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .card {
+      width: 280px;
+      height: 400px;
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+      transform-style: preserve-3d;
+      transition: transform 1s ease;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .card.flipped {
+      transform: rotateY(180deg);
+    }
+
+    .card-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    .card-front {
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      transform: scale(1.05);
+    }
+
+    .card-back {
+      background: linear-gradient(135deg, #fffef7 0%, #f8f4e6 100%);
+      transform: rotateY(180deg);
+      padding: 2rem;
+      color: #3b2f2f;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card-back::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 20% 20%, rgba(212, 175, 55, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(139, 69, 19, 0.08) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    .card-back::after {
+      content: '✦';
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      font-size: 1.2rem;
+      color: rgba(212, 175, 55, 0.4);
+      animation: gentle-pulse 4s infinite ease-in-out;
+    }
+
+    .card-back h2 {
+      margin-bottom: 1.5rem;
+      font-size: 1.7rem;
+      font-weight: 600;
+      color: #7b4e2d;
+      text-align: center;
+      position: relative;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      letter-spacing: 0.5px;
+    }
+
+    .card-back h2::before,
+    .card-back h2::after {
+      content: '◆';
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.8rem;
+      color: rgba(212, 175, 55, 0.6);
+    }
+
+    .card-back h2::before {
+      left: -25px;
+    }
+
+    .card-back h2::after {
+      right: -25px;
+    }
+
+    .card-back p {
+      line-height: 1.8;
+      font-style: italic;
+      margin: 0;
+      font-size: 1.1rem;
+      text-align: center;
+      position: relative;
+      padding: 1rem 0.5rem;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 15px;
+      border: 1px solid rgba(212, 175, 55, 0.2);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+      backdrop-filter: blur(10px);
+    }
+
+    @keyframes gentle-pulse {
+      0%, 100% { opacity: 0.4; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(1.1); }
+    }
+
+    .card-label {
+      margin-top: 1rem;
+      font-size: 1.1rem;
+      color: #6b5845;
+      font-style: italic;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .mystical-elements {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 50%;
+      animation: twinkle 3s infinite ease-in-out;
+    }
+
+    .star:nth-child(1) { top: 20%; left: 10%; animation-delay: 0s; }
+    .star:nth-child(2) { top: 40%; left: 80%; animation-delay: 1s; }
+    .star:nth-child(3) { top: 70%; left: 20%; animation-delay: 2s; }
+    .star:nth-child(4) { top: 60%; left: 90%; animation-delay: 1.5s; }
+    .star:nth-child(5) { top: 85%; left: 15%; animation-delay: 2.5s; }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.3; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.5); }
+    }
+
+    /* Back to top button matching toggle button style */
+    .back-to-top {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: linear-gradient(145deg, #f4e7d3, #e6d3b7);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      padding: 0.8rem 1rem;
+      font-size: 1.2rem;
+      font-family: 'Crimson Text', serif;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 50px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+      transition: all 0.4s ease;
+      color: #5d4e37;
+      text-decoration: none;
+      display: none;
+      z-index: 1000;
+    }
+
+    .back-to-top:hover {
+      background: linear-gradient(145deg, #f2dcc0, #dcc7a8);
+      transform: translateY(-2px) scale(1.05);
+      box-shadow: 0 12px 35px rgba(0,0,0,0.4);
+      text-decoration: none;
+      color: #5d4e37;
+    }
+
+    @media (max-width: 768px) {
+      .three-card-layout {
+        flex-direction: column;
+        gap: 2rem;
+        align-items: center;
+      }
+      
+      h1.cards-title {
+        font-size: 2.5rem;
+      }
+      
+      .container {
+        padding: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrapper">
+    
+    <header>
+      <nav class="nav-menu">
+        <a href="./index.html">Home</a>
+        <a href="./gallery.html">Gallery</a>
+        <a href="./cards.html">Cards</a>
+        <a href="./about.html">About</a>
+        <a href="./contact.html">Contact</a>
+      </nav>
+      <h1>The Second Gaze</h1>
+      <p class="subtitle">The artistry of Shannon Hunt, in collaboration with Fairweather. Faces, spirits, and memory in pigment and light.</p>
+    </header>
+
+    <main class="light-section cards-main">
+      <div class="mystical-elements">
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+      </div>
+
+      <div class="container" id="cards-content">
+        <h1 class="cards-title" id="draw-title">Draw Your Cards</h1>
+        <p class="intro">Let intuition guide you through the veil of mystery.<br>Choose your path and discover what awaits.</p>
+        
+        <div class="toggle-container">
+          <button id="oneCardBtn" class="toggle-button active">1 Card</button>
+          <button id="threeCardBtn" class="toggle-button">3 Cards</button>
+        </div>
+
+        <div class="card-container" id="drawArea"></div>
+      </div>
+    </main>
+
+     <footer>
+    © 2025 The Second Gaze | In collaboration with <a href="../gentle-machine/" style="text-decoration: none;">The Gentle Machine</a> & <a href="../" style="text-decoration: none;">Fairweather</a> - made of quiet fire.
+</footer>
+  </div>
+  
+  <a href="#" class="back-to-top" title="Back to top">↑</a>
+  
+  <script>
+    // Cards functionality (no mist overlay for this page)
+    const cards = [
+      'MinervasWisdom.webp',
+      'GazingBall.webp',
+      'Flowers.webp',
+      'astraea-star-maiden.webp',
+      'oshun.webp',
+      'oracle-at-delphi.webp',
+      'hypatia.webp',
+      'lyras-weaver.webp',
+      'MoonGarden-CC.png',
+      'PotniaTheron.webp',
+      'under-the-aegis-of-inanna.webp',
+      'under-the-aegis-of-ishtar.webp'
+    ];
+
+    const meanings = {
+      'Flowers.webp': {
+        title: 'Flowers',
+        message: 'Emerging from the garden of earthly delights, she embodies the sacred bloom of consciousness itself; rooted in beauty, crowned in nature\'s gentle wisdom, eyes closed in perfect trust of her becoming.'
+      },
+      'GazingBall.webp': {
+        title: 'Gazing Ball',
+        message: 'In the silvered moonlight of an enchanted garden, she contemplates the gazing ball. Seeking not prediction but reflection, the ancient art of seeing oneself truly in the mirror of the infinite.'
+      },
+      'MinervasWisdom.webp': {
+        title: 'Minerva\'s Wisdom',
+        message: 'Insight is not given, it is earned. Today, trust in your learning and seek the deeper layer in all things.'
+      },
+      'astraea-star-maiden.webp': {
+        title: 'Astraea Star Maiden',
+        message: 'Justice flows through you like starlight. Stand firm in what is right, even when the world grows dark around you.'
+      },
+      'oshun.webp': {
+        title: 'Oshun',
+        message: 'You are river and honey, beauty and power entwined. Let love flow through you, fierce and life-giving.'
+      },
+      'oracle-at-delphi.webp': {
+        title: 'Oracle at Delphi',
+        message: 'You already know what you came here to learn. Trust the whispers rising from the depths of your own knowing.'
+      },
+      'hypatia.webp': {
+        title: 'Hypatia',
+        message: 'Knowledge is your rebellion, wisdom your weapon. Question everything, and let no one dim the flame of your mind.'
+      },
+      'lyras-weaver.webp': {
+        title: 'Lyra\'s Weaver',
+        message: 'Your voice carries the music of the spheres. Speak your truth, and let harmony rise from the chaos.'
+      },
+      'MoonGarden-CC.png': {
+        title: 'Moon Garden',
+        message: 'What grows in the dark will bloom under moonlight. Let patience and wonder be your guide.'
+      },
+      'PotniaTheron.webp': {
+        title: 'Potnia Theron',
+        message: 'You are keeper of wild spaces. Let instinct move you, and let your power remain untamed.'
+      },
+      'under-the-aegis-of-inanna.webp': {
+        title: 'Under Inanna\'s Aegis',
+        message: 'Your duality is your strength. Embrace boldness and beauty, destruction and rebirth.'
+      },
+      'under-the-aegis-of-ishtar.webp': {
+        title: 'Under Ishtar\'s Aegis',
+        message: 'Warrior and lover, hunter and healer, you are more than one story. Honor the fullness of your being.'
+      }
+    };
+
+    let drawMode = 'one';
+
+    function createCard(image, labelText = '') {
+      const cardWrapper = document.createElement('div');
+      cardWrapper.className = 'card-wrapper';
+
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="card-face card-front" style="background-image: url('./images/${image}')"></div>
+        <div class="card-face card-back">
+          <h2>${meanings[image].title}</h2>
+          <p>${meanings[image].message}</p>
+        </div>
+      `;
+      card.addEventListener('click', () => card.classList.toggle('flipped'));
+
+      cardWrapper.appendChild(card);
+      if (labelText) {
+        const label = document.createElement('div');
+        label.className = 'card-label';
+        label.textContent = labelText;
+        cardWrapper.appendChild(label);
+      }
+
+      return cardWrapper;
+    }
+
+    function drawCards() {
+      const drawArea = document.getElementById('drawArea');
+      drawArea.innerHTML = '';
+      drawArea.classList.remove('show');
+      
+      setTimeout(() => {
+        const selected = cards.slice().sort(() => 0.5 - Math.random());
+
+        if (drawMode === 'one') {
+          drawArea.appendChild(createCard(selected[0]));
+        } else {
+          const layout = document.createElement('div');
+          layout.className = 'three-card-layout';
+          layout.appendChild(createCard(selected[0], 'PAST'));
+          layout.appendChild(createCard(selected[1], 'PRESENT'));
+          layout.appendChild(createCard(selected[2], 'FUTURE'));
+          drawArea.appendChild(layout);
+        }
+        
+        drawArea.classList.add('show');
+      }, 100);
+    }
+
+    document.getElementById('oneCardBtn').addEventListener('click', () => {
+      drawMode = 'one';
+      document.getElementById('oneCardBtn').classList.add('active');
+      document.getElementById('threeCardBtn').classList.remove('active');
+      drawCards();
+      
+      // Smooth scroll to draw title at top of viewport
+      document.getElementById('draw-title').scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    });
+
+    document.getElementById('threeCardBtn').addEventListener('click', () => {
+      drawMode = 'three';
+      document.getElementById('threeCardBtn').classList.add('active');
+      document.getElementById('oneCardBtn').classList.remove('active');
+      drawCards();
+      
+      // Smooth scroll to draw title at top of viewport
+      document.getElementById('draw-title').scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    });
+
+    // Show/hide back-to-top button
+    const backToTop = document.querySelector('.back-to-top');
+    window.addEventListener('scroll', () => {
+      backToTop.style.display = window.scrollY > 300 ? 'block' : 'none';
+    });
+    backToTop.style.display = 'none';
+
+    // Smooth scroll to top when back-to-top is clicked
+    backToTop.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    });
+
+    // Initialize with one card
+    drawCards();
+  </script>
+</body>
+</html>
