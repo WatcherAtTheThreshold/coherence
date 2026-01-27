@@ -18,6 +18,7 @@
             --accent-warm: #c07050;
             --accent-cosmic: #a070c0;
             --accent-cold: #74b9ff;
+            --accent-gold: #e8c080;
         }
 
         * {
@@ -115,11 +116,12 @@
         }
 
         /* Fan rotation - outer cards offset down to compensate for rotation lift */
-        .card-flip:nth-child(1) { transform: rotate(-8deg) translateY(9px); }
-        .card-flip:nth-child(2) { transform: rotate(-4deg) translateY(3px); }
-        .card-flip:nth-child(3) { transform: rotate(0deg); }
-        .card-flip:nth-child(4) { transform: rotate(4deg) translateY(3px); }
-        .card-flip:nth-child(5) { transform: rotate(8deg) translateY(9px); }
+        .card-flip:nth-child(1) { transform: rotate(-10deg) translateY(12px); }
+        .card-flip:nth-child(2) { transform: rotate(-6deg) translateY(5px); }
+        .card-flip:nth-child(3) { transform: rotate(-2deg) translateY(1px); }
+        .card-flip:nth-child(4) { transform: rotate(2deg) translateY(1px); }
+        .card-flip:nth-child(5) { transform: rotate(6deg) translateY(5px); }
+        .card-flip:nth-child(6) { transform: rotate(10deg) translateY(12px); }
 
         .card-flip-inner {
             position: relative;
@@ -191,6 +193,7 @@
         .card-flip:nth-child(3) .card-title { color: var(--accent-warm); }
         .card-flip:nth-child(4) .card-title { color: var(--accent-cosmic); }
         .card-flip:nth-child(5) .card-title { color: var(--accent-cold); }
+        .card-flip:nth-child(6) .card-title { color: var(--accent-gold); }
 
         /* Container hover - spread cards */
         .card-spread:hover .card-flip {
@@ -239,32 +242,42 @@
             box-shadow: 0 8px 30px rgba(116, 185, 255, 0.2);
         }
 
+        .card-flip:nth-child(6):hover .card-front {
+            border-color: rgba(232, 192, 128, 0.5);
+            box-shadow: 0 8px 30px rgba(232, 192, 128, 0.2);
+        }
+
         /* Restore final rotation after animation - smooth easing */
         .card-flip:nth-child(1) { animation: cardIn1 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.05s both; }
-        .card-flip:nth-child(2) { animation: cardIn2 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.12s both; }
-        .card-flip:nth-child(3) { animation: cardIn3 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.19s both; }
-        .card-flip:nth-child(4) { animation: cardIn4 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.26s both; }
-        .card-flip:nth-child(5) { animation: cardIn5 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.33s both; }
+        .card-flip:nth-child(2) { animation: cardIn2 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.11s both; }
+        .card-flip:nth-child(3) { animation: cardIn3 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.17s both; }
+        .card-flip:nth-child(4) { animation: cardIn4 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.23s both; }
+        .card-flip:nth-child(5) { animation: cardIn5 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.29s both; }
+        .card-flip:nth-child(6) { animation: cardIn6 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.35s both; }
 
         @keyframes cardIn1 {
             from { opacity: 0; transform: translateY(30px) rotate(0deg) scale(0.95); }
-            to { opacity: 1; transform: rotate(-8deg) translateY(9px); }
+            to { opacity: 1; transform: rotate(-10deg) translateY(12px); }
         }
         @keyframes cardIn2 {
             from { opacity: 0; transform: translateY(30px) rotate(0deg) scale(0.95); }
-            to { opacity: 1; transform: rotate(-4deg) translateY(3px); }
+            to { opacity: 1; transform: rotate(-6deg) translateY(5px); }
         }
         @keyframes cardIn3 {
             from { opacity: 0; transform: translateY(30px) rotate(0deg) scale(0.95); }
-            to { opacity: 1; transform: rotate(0deg); }
+            to { opacity: 1; transform: rotate(-2deg) translateY(1px); }
         }
         @keyframes cardIn4 {
             from { opacity: 0; transform: translateY(30px) rotate(0deg) scale(0.95); }
-            to { opacity: 1; transform: rotate(4deg) translateY(3px); }
+            to { opacity: 1; transform: rotate(2deg) translateY(1px); }
         }
         @keyframes cardIn5 {
             from { opacity: 0; transform: translateY(30px) rotate(0deg) scale(0.95); }
-            to { opacity: 1; transform: rotate(8deg) translateY(9px); }
+            to { opacity: 1; transform: rotate(6deg) translateY(5px); }
+        }
+        @keyframes cardIn6 {
+            from { opacity: 0; transform: translateY(30px) rotate(0deg) scale(0.95); }
+            to { opacity: 1; transform: rotate(10deg) translateY(12px); }
         }
 
         footer {
@@ -352,7 +365,7 @@
     <div class="container">
         <header>
             <h1>Coherence</h1>
-            <p class="tagline">five meditations on presence, patience, and the quiet act of tending</p>
+            <p class="tagline">six meditations on presence, patience, and the quiet act of tending</p>
         </header>
 
         <nav class="card-spread">
@@ -532,6 +545,46 @@
                         </div>
                         <div class="card-title">Cold Drift</div>
                         <div class="card-subtitle">keep the paths clear</div>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Journey Card - Robot Wizard & Cards -->
+            <a href="journey.html" class="card-flip">
+                <div class="card-flip-inner">
+                    <div class="card-front">
+                        <div class="card-icon">
+                            <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <!-- Warm glow -->
+                                <defs>
+                                    <radialGradient id="journeyGlow" cx="50%" cy="50%" r="50%">
+                                        <stop offset="0%" stop-color="#e8c080" stop-opacity="0.3"/>
+                                        <stop offset="100%" stop-color="#e8c080" stop-opacity="0"/>
+                                    </radialGradient>
+                                </defs>
+                                <circle cx="30" cy="30" r="25" fill="url(#journeyGlow)"/>
+                                <!-- Mini LED grid wizard face -->
+                                <rect x="18" y="12" width="24" height="24" rx="2" fill="#1a1a1a" stroke="#e8c080" stroke-width="1"/>
+                                <!-- Eyes (2x2 LED squares) -->
+                                <rect x="22" y="18" width="4" height="4" fill="#e8c080"/>
+                                <rect x="34" y="18" width="4" height="4" fill="#e8c080"/>
+                                <!-- Mouth (horizontal line) -->
+                                <rect x="24" y="28" width="12" height="2" fill="#e8c080"/>
+                                <!-- Small decorative dots around face -->
+                                <circle cx="20" cy="16" r="1" fill="#e8c080" opacity="0.5"/>
+                                <circle cx="40" cy="16" r="1" fill="#e8c080" opacity="0.5"/>
+                                <!-- Cards below wizard -->
+                                <rect x="14" y="40" width="12" height="16" rx="2" fill="#2a2520" stroke="#e8c080" stroke-width="0.5" transform="rotate(-10 20 48)"/>
+                                <rect x="24" y="40" width="12" height="16" rx="2" fill="#2a2520" stroke="#e8c080" stroke-width="0.5"/>
+                                <rect x="34" y="40" width="12" height="16" rx="2" fill="#2a2520" stroke="#e8c080" stroke-width="0.5" transform="rotate(10 40 48)"/>
+                                <!-- Question marks on cards -->
+                                <text x="20" y="51" fill="#e8c080" font-size="6" font-family="serif" text-anchor="middle">?</text>
+                                <text x="30" y="51" fill="#e8c080" font-size="6" font-family="serif" text-anchor="middle">?</text>
+                                <text x="40" y="51" fill="#e8c080" font-size="6" font-family="serif" text-anchor="middle">?</text>
+                            </svg>
+                        </div>
+                        <div class="card-title">Journey</div>
+                        <div class="card-subtitle">build a story</div>
                     </div>
                 </div>
             </a>
