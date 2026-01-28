@@ -661,21 +661,29 @@
 
         .end-card .story-text {
             font-family: 'Cormorant Garamond', serif;
-            font-size: 0.8rem;
-            color: var(--text-mid);
+            font-size: 0.85rem;
+            color: var(--text-bright);
             text-align: center;
-            line-height: 1.7;
+            line-height: 1.8;
             font-style: italic;
             margin-bottom: 1rem;
-            max-height: 180px;
-            overflow-y: auto;
+            min-height: 60px;
+            max-height: 120px;
             padding: 0 0.5rem;
             opacity: 0;
-            transition: opacity 1.5s ease;
+            transition: opacity 1s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .end-card .story-text.visible {
             opacity: 1;
+        }
+
+        .end-card .story-text.fade-out {
+            opacity: 0;
+            transition: opacity 0.8s ease;
         }
 
         .end-card .story-text::-webkit-scrollbar {
@@ -1118,6 +1126,10 @@
 
             setTimeout(() => {
                 wizardSpeak(randomFrom(DIALOGUE.start));
+                // Smile after speaking
+                setTimeout(() => {
+                    setWizardMood('pleased');
+                }, 2500);
             }, 1800);
         }
 
@@ -1552,6 +1564,10 @@
 
             setTimeout(() => {
                 wizardSpeak(randomFrom(DIALOGUE.start));
+                // Smile after speaking
+                setTimeout(() => {
+                    setWizardMood('pleased');
+                }, 2500);
             }, 1200);
         }
 
@@ -1613,25 +1629,20 @@
         }
 
         function readStoryAloud() {
-            // Build the story narration using beats with stitching phrases
-            // Call for display first to set the random phrases
-            const displayStory = stitchStoryBeats(true);
+            // Build story parts for sequential display
+            const storyParts = getStoryParts();
             const ttsStory = stitchStoryBeats(false);
-
-            // Display the story text on the card with line breaks
             const storyTextEl = document.getElementById('end-story-text');
-            storyTextEl.innerHTML = `"${displayStory}"`;
-            storyTextEl.classList.add('visible');
 
+            // If no TTS, just cycle through visuals
             if (!game.ttsEnabled || !('speechSynthesis' in window)) {
-                // If no TTS, just show farewell after a delay
-                setTimeout(() => showFarewellElements(), 4000);
+                displayBeatsSequentially(storyParts, storyTextEl, false);
                 return;
             }
 
             window.speechSynthesis.cancel();
 
-            // Create utterance
+            // Create utterance for full story
             const utterance = new SpeechSynthesisUtterance(ttsStory);
             utterance.rate = 0.7; // Slower for dramatic effect
             utterance.pitch = 0.85;
@@ -1647,19 +1658,101 @@
             // When done reading, show farewell
             utterance.onend = () => {
                 setTimeout(() => {
-                    showFarewellElements();
-                }, 1500);
+                    storyTextEl.classList.add('fade-out');
+                    setTimeout(() => showFarewellElements(), 1000);
+                }, 1000);
             };
 
             // Handle errors
             utterance.onerror = () => {
+                storyTextEl.classList.add('fade-out');
                 setTimeout(() => showFarewellElements(), 1000);
             };
 
             // Update end wizard during reading
             setEndWizardMood('calm');
 
+            // Start TTS and display beats in sync
             window.speechSynthesis.speak(utterance);
+            displayBeatsSequentially(storyParts, storyTextEl, true);
+        }
+
+        function getStoryParts() {
+            const beats = game.story.map(card => card.beat);
+            const storyLength = beats.length;
+
+            if (storyLength === 0) return [];
+            if (storyLength === 1) return [`Once, ${beats[0]}.`];
+
+            // Stitching phrases
+            const openings = ['Once,', 'At the beginning,', 'In the beginning,'];
+            const middles = ['Then,', 'Along the way,', 'And so,', 'In time,'];
+            const endings = ['At last,', 'In the end,', 'Finally,', 'And so it was that'];
+
+            // Use stored phrases if available
+            let selectedPhrases;
+            if (game.storyPhrases && game.storyPhrases.length === storyLength) {
+                selectedPhrases = game.storyPhrases;
+            } else {
+                selectedPhrases = beats.map((beat, index) => {
+                    if (index === 0) return randomFrom(openings);
+                    if (index === storyLength - 1) return randomFrom(endings);
+                    return randomFrom(middles);
+                });
+                game.storyPhrases = selectedPhrases;
+            }
+
+            return beats.map((beat, index) => `${selectedPhrases[index]} ${beat}.`);
+        }
+
+        function displayBeatsSequentially(parts, element, withTTS) {
+            if (parts.length === 0) {
+                setTimeout(() => showFarewellElements(), 2000);
+                return;
+            }
+
+            let currentIndex = 0;
+
+            function showNextBeat() {
+                if (currentIndex >= parts.length) {
+                    if (!withTTS) {
+                        // No TTS - fade out and show farewell
+                        setTimeout(() => {
+                            element.classList.add('fade-out');
+                            setTimeout(() => showFarewellElements(), 1000);
+                        }, 2000);
+                    }
+                    return;
+                }
+
+                const beat = parts[currentIndex];
+                const wordCount = beat.split(' ').length;
+                // Estimate duration: ~0.55 seconds per word at rate 0.7
+                const duration = Math.max(2500, wordCount * 550);
+
+                // Fade out current
+                element.classList.remove('visible');
+                element.classList.add('fade-out');
+
+                setTimeout(() => {
+                    // Update text
+                    element.innerHTML = `"${beat}"`;
+                    element.classList.remove('fade-out');
+
+                    // Small delay then fade in
+                    setTimeout(() => {
+                        element.classList.add('visible');
+                    }, 100);
+
+                    currentIndex++;
+
+                    // Schedule next beat
+                    setTimeout(showNextBeat, duration);
+                }, 400);
+            }
+
+            // Start showing beats
+            showNextBeat();
         }
 
         function stitchStoryBeats(forDisplay = false) {
@@ -1795,6 +1888,10 @@
 
             setTimeout(() => {
                 wizardSpeak(randomFrom(DIALOGUE.start));
+                // Smile after speaking
+                setTimeout(() => {
+                    setWizardMood('pleased');
+                }, 2500);
             }, 2600);
         }
 
