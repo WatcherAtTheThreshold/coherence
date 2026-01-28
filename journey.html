@@ -661,13 +661,13 @@
 
         .end-card .story-text {
             font-family: 'Cormorant Garamond', serif;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: var(--text-mid);
             text-align: center;
-            line-height: 1.9;
+            line-height: 1.7;
             font-style: italic;
             margin-bottom: 1rem;
-            max-height: 140px;
+            max-height: 180px;
             overflow-y: auto;
             padding: 0 0.5rem;
             opacity: 0;
@@ -1222,43 +1222,37 @@
             }
         }
 
-        function fadeOutMusic(duration = 4000) {
+        function fadeMusicTo(targetVolume, duration = 3000) {
             const startVolume = music.volume;
-            const steps = 50;
+            const steps = 40;
             const stepTime = duration / steps;
-            const volumeStep = startVolume / steps;
+            const volumeDiff = targetVolume - startVolume;
+            const volumeStep = volumeDiff / steps;
 
             let currentStep = 0;
             const fadeInterval = setInterval(() => {
                 currentStep++;
-                music.volume = Math.max(0, startVolume - (volumeStep * currentStep));
+                music.volume = Math.max(0, Math.min(0.5, startVolume + (volumeStep * currentStep)));
 
                 if (currentStep >= steps) {
                     clearInterval(fadeInterval);
-                    music.pause();
-                    music.volume = 0.3; // Reset for next play
+                    music.volume = targetVolume;
                 }
             }, stepTime);
+        }
+
+        function fadeOutMusic(duration = 4000) {
+            fadeMusicTo(0, duration);
+            setTimeout(() => {
+                music.pause();
+                music.volume = 0.3; // Reset for next play
+            }, duration + 100);
         }
 
         function fadeInMusic(duration = 3000) {
             music.volume = 0;
             music.play().catch(err => console.log('Audio:', err));
-
-            const targetVolume = 0.3;
-            const steps = 30;
-            const stepTime = duration / steps;
-            const volumeStep = targetVolume / steps;
-
-            let currentStep = 0;
-            const fadeInterval = setInterval(() => {
-                currentStep++;
-                music.volume = Math.min(targetVolume, volumeStep * currentStep);
-
-                if (currentStep >= steps) {
-                    clearInterval(fadeInterval);
-                }
-            }, stepTime);
+            fadeMusicTo(0.3, duration);
         }
 
         function wizardSpeak(text) {
@@ -1539,6 +1533,7 @@
 
         function newStory() {
             game.story = [];
+            game.storyPhrases = null;
             game.coherence = { themes: {}, tones: {}, roles: {}, lastTone: null };
 
             const log = document.getElementById('story-log');
@@ -1579,9 +1574,9 @@
             setWizardMood('pleased');
             wizardSpeak("The story is complete. Let me share what we built together...");
 
-            // Start music fade
+            // Fade music to half volume for story reading
             setTimeout(() => {
-                fadeOutMusic(6000);
+                fadeMusicTo(0.15, 4000);
             }, 2000);
 
             // Show end overlay
@@ -1619,11 +1614,13 @@
 
         function readStoryAloud() {
             // Build the story narration using beats with stitching phrases
-            const fullStory = stitchStoryBeats();
+            // Call for display first to set the random phrases
+            const displayStory = stitchStoryBeats(true);
+            const ttsStory = stitchStoryBeats(false);
 
-            // Display the story text on the card
+            // Display the story text on the card with line breaks
             const storyTextEl = document.getElementById('end-story-text');
-            storyTextEl.textContent = `"${fullStory}"`;
+            storyTextEl.innerHTML = `"${displayStory}"`;
             storyTextEl.classList.add('visible');
 
             if (!game.ttsEnabled || !('speechSynthesis' in window)) {
@@ -1635,7 +1632,7 @@
             window.speechSynthesis.cancel();
 
             // Create utterance
-            const utterance = new SpeechSynthesisUtterance(fullStory);
+            const utterance = new SpeechSynthesisUtterance(ttsStory);
             utterance.rate = 0.7; // Slower for dramatic effect
             utterance.pitch = 0.85;
             utterance.volume = 0.9;
@@ -1665,7 +1662,7 @@
             window.speechSynthesis.speak(utterance);
         }
 
-        function stitchStoryBeats() {
+        function stitchStoryBeats(forDisplay = false) {
             const beats = game.story.map(card => card.beat);
             const storyLength = beats.length;
 
@@ -1677,22 +1674,35 @@
             const middles = ['Then,', 'Along the way,', 'And so,', 'In time,'];
             const endings = ['At last,', 'In the end,', 'Finally,', 'And so it was that'];
 
-            let story = '';
+            // Use stored phrases if available (so display and TTS match)
+            let selectedPhrases;
+            if (game.storyPhrases && game.storyPhrases.length === storyLength) {
+                selectedPhrases = game.storyPhrases;
+            } else {
+                // Generate new phrases
+                selectedPhrases = beats.map((beat, index) => {
+                    if (index === 0) return randomFrom(openings);
+                    if (index === storyLength - 1) return randomFrom(endings);
+                    return randomFrom(middles);
+                });
+                // Store for consistent display/TTS
+                game.storyPhrases = selectedPhrases;
+            }
+
+            let parts = [];
 
             beats.forEach((beat, index) => {
-                if (index === 0) {
-                    // First beat
-                    story += `${randomFrom(openings)} ${beat}. `;
-                } else if (index === storyLength - 1) {
-                    // Last beat
-                    story += `${randomFrom(endings)} ${beat}.`;
-                } else {
-                    // Middle beats
-                    story += `${randomFrom(middles)} ${beat}. `;
-                }
+                const phrase = selectedPhrases[index];
+                parts.push(`${phrase} ${beat}.`);
             });
 
-            return story;
+            if (forDisplay) {
+                // Return with line breaks for visual display
+                return parts.join('<br><br>');
+            } else {
+                // Return plain text for TTS
+                return parts.join(' ');
+            }
         }
 
         function showFarewellElements() {
@@ -1754,14 +1764,15 @@
                 document.querySelector('.container').classList.remove('dimmed');
             }, 800);
 
-            // Fade music back in
+            // Fade music back to full volume
             setTimeout(() => {
-                fadeInMusic(3000);
+                fadeMusicTo(0.3, 3000);
             }, 1000);
 
             // Reset game state
             setTimeout(() => {
                 game.story = [];
+                game.storyPhrases = null;
                 game.coherence = { themes: {}, tones: {}, roles: {}, lastTone: null };
 
                 const log = document.getElementById('story-log');
