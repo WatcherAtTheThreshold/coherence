@@ -413,6 +413,8 @@
         .story-card[data-role="action"] .card-type { color: #8e6b6b; }
         .story-card[data-role="object"] .card-type { color: #8e7d6b; }
         .story-card[data-role="tone"] .card-type { color: #6b7d8e; }
+        .story-card[data-role="problem"] .card-type { color: #8e6b7d; }
+        .story-card[data-role="resolution"] .card-type { color: #7d8e8e; }
 
         /* ========== STORY LOG ========== */
         .story-section {
@@ -901,7 +903,23 @@
             { id: 27, role: 'tone', title: 'Shadows Lengthen', text: 'The familiar becomes strange as light retreats.', beat: 'things became difficult for a while, and nothing could be hurried', tone: 'tense', theme: 'mystery', weight: 'heavy' },
             { id: 28, role: 'tone', title: 'Rain Begins', text: 'The world softens, edges blurring into gentleness.', beat: 'the world softened, and edges blurred into gentleness', tone: 'calm', theme: 'nature', weight: 'light' },
             { id: 29, role: 'tone', title: 'A Fire Crackles', text: 'Warmth blooms in the dark, drawing all closer.', beat: 'warmth bloomed in the dark, drawing all things closer', tone: 'warm', theme: 'home', weight: 'light' },
-            { id: 30, role: 'tone', title: 'Wind Stirs', text: 'Something is changing, carried on the moving air.', beat: 'something shifted, carried on the moving air', tone: 'strange', theme: 'journey', weight: 'light' }
+            { id: 30, role: 'tone', title: 'Wind Stirs', text: 'Something is changing, carried on the moving air.', beat: 'something shifted, carried on the moving air', tone: 'strange', theme: 'journey', weight: 'light' },
+
+            // PROBLEM cards (available during complication phase)
+            { id: 31, role: 'problem', title: 'The Path Fades', text: 'What was clear becomes uncertain. The way forward must be found anew.', beat: 'the path they had followed disappeared, and they stood uncertain', tone: 'tense', theme: 'journey', weight: 'heavy' },
+            { id: 32, role: 'problem', title: 'Something Lost', text: 'What was held dear slips away, leaving an absence that echoes.', beat: 'something precious was lost, and its absence weighed heavily', tone: 'tense', theme: 'home', weight: 'heavy' },
+            { id: 33, role: 'problem', title: 'The Storm Gathers', text: 'Dark clouds mass on the horizon. Shelter must be sought or made.', beat: 'a storm gathered, and there was no clear place to shelter', tone: 'tense', theme: 'nature', weight: 'heavy' },
+            { id: 34, role: 'problem', title: 'A Trust Broken', text: 'What was believed proves false. The foundation cracks.', beat: 'trust was broken, and nothing seemed certain anymore', tone: 'tense', theme: 'mystery', weight: 'heavy' },
+            { id: 35, role: 'problem', title: 'The Machine Fails', text: 'What once worked falls silent. Old ways must serve where new ones cannot.', beat: 'what they relied upon failed, and they had to find another way', tone: 'tense', theme: 'machine', weight: 'heavy' },
+            { id: 36, role: 'problem', title: 'A Shadow Falls', text: 'Something dims the light. Not evil, but difficult. A weight that must be carried.', beat: 'a shadow fell across the journey, and the way grew harder', tone: 'tense', theme: 'mystery', weight: 'heavy' },
+
+            // RESOLUTION cards (available during closing phase)
+            { id: 37, role: 'resolution', title: 'Understanding Comes', text: 'What was confused becomes clear. The pieces finally fit.', beat: 'understanding came at last, quiet and complete', tone: 'calm', theme: 'mystery', weight: 'light' },
+            { id: 38, role: 'resolution', title: 'Home Is Found', text: 'Not a return, but a discovery. The heart knows where it belongs.', beat: 'home was found, not where expected, but where it was needed', tone: 'warm', theme: 'home', weight: 'light' },
+            { id: 39, role: 'resolution', title: 'The Wound Heals', text: 'Time and care close what was broken. A scar remains, but it no longer hurts.', beat: 'what was wounded began to heal, slowly but surely', tone: 'hopeful', theme: 'nature', weight: 'light' },
+            { id: 40, role: 'resolution', title: 'Peace Settles', text: 'The struggle ends not in victory, but in acceptance. That is enough.', beat: 'peace settled over everything, and the struggle ended', tone: 'calm', theme: 'journey', weight: 'light' },
+            { id: 41, role: 'resolution', title: 'A New Beginning', text: 'From the ending, something fresh emerges. The cycle turns.', beat: 'from the ending, a new beginning quietly emerged', tone: 'hopeful', theme: 'nature', weight: 'light' },
+            { id: 42, role: 'resolution', title: 'The Circle Closes', text: 'What started long ago finds its completion. The story knows its shape.', beat: 'the circle closed, and the story found its shape', tone: 'calm', theme: 'journey', weight: 'light' }
         ];
 
         // ============================================
@@ -954,6 +972,34 @@
                 "The story finds balance.",
                 "All pieces have their place.",
                 "The weave grows richer."
+            ],
+            // Phase-specific dialogue
+            phaseMiddle: [
+                "The world opens before you.",
+                "The journey continues.",
+                "More threads to weave."
+            ],
+            phaseComplication: [
+                "The story deepens now. Challenges may appear.",
+                "We enter uncertain ground. Choose carefully.",
+                "The path grows harder. What will you face?"
+            ],
+            phaseClosing: [
+                "The ending draws near. How will it resolve?",
+                "The story seeks its shape. Resolution awaits.",
+                "All threads must find their end. Choose wisely."
+            ],
+            // Problem card reactions
+            problem: [
+                "A challenge enters the tale.",
+                "Difficulty finds its way in.",
+                "The story must face this now."
+            ],
+            // Resolution card reactions
+            resolution: [
+                "The story finds its peace.",
+                "A fitting end takes shape.",
+                "Resolution settles gently."
             ]
         };
 
@@ -965,6 +1011,7 @@
             currentCards: [],
             cardIndex: 0,
             ttsEnabled: true,
+            lastPhase: 'opening',
             coherence: {
                 themes: {},
                 tones: {},
@@ -1291,23 +1338,126 @@
         // ============================================
         // CARDS
         // ============================================
+        function getStoryPhase() {
+            const cardCount = game.story.length;
+            if (cardCount === 0) return 'opening';
+            if (cardCount < 5) return 'middle';
+            if (cardCount < 7) return 'complication';
+            return 'closing';
+        }
+
+        function getAvailableRoles() {
+            const phase = getStoryPhase();
+            switch (phase) {
+                case 'opening':
+                    // Only tone and place cards to set atmosphere
+                    return ['tone', 'place'];
+                case 'middle':
+                    // All cards except problem and resolution
+                    return ['character', 'place', 'action', 'object', 'tone'];
+                case 'complication':
+                    // Problem cards become available
+                    return ['character', 'place', 'action', 'object', 'tone', 'problem'];
+                case 'closing':
+                    // Resolution cards become available
+                    return ['character', 'place', 'action', 'object', 'tone', 'problem', 'resolution'];
+                default:
+                    return ['character', 'place', 'action', 'object', 'tone'];
+            }
+        }
+
+        function announcePhaseTransition(phase) {
+            let dialogue, mood;
+            switch (phase) {
+                case 'middle':
+                    dialogue = DIALOGUE.phaseMiddle;
+                    mood = 'curious';
+                    break;
+                case 'complication':
+                    dialogue = DIALOGUE.phaseComplication;
+                    mood = 'unsettled';
+                    break;
+                case 'closing':
+                    dialogue = DIALOGUE.phaseClosing;
+                    mood = 'thinking';
+                    break;
+                default:
+                    return; // No announcement for opening
+            }
+
+            setTimeout(() => {
+                wizardSpeak(randomFrom(dialogue));
+                setWizardMood(mood);
+            }, 800);
+        }
+
         function drawCards() {
             const container = document.getElementById('cards-container');
             container.innerHTML = '';
 
-            // Get 3 random cards not in story
+            // Get available roles for current story phase
+            const allowedRoles = getAvailableRoles();
             const usedIds = game.story.map(c => c.id);
-            const available = CARDS.filter(c => !usedIds.includes(c.id));
 
-            if (available.length < 3) {
-                // Story is complete - trigger end state
+            // Filter cards by phase and not already used
+            let available = CARDS.filter(c =>
+                !usedIds.includes(c.id) && allowedRoles.includes(c.role)
+            );
+
+            // In closing phase, ensure at least one resolution card is offered if available
+            const phase = getStoryPhase();
+            if (phase === 'closing') {
+                const resolutionCards = available.filter(c => c.role === 'resolution');
+                const otherCards = available.filter(c => c.role !== 'resolution');
+
+                if (resolutionCards.length > 0 && otherCards.length >= 2) {
+                    // Guarantee one resolution card
+                    const shuffledResolutions = resolutionCards.sort(() => Math.random() - 0.5);
+                    const shuffledOthers = otherCards.sort(() => Math.random() - 0.5);
+                    game.currentCards = [
+                        shuffledResolutions[0],
+                        shuffledOthers[0],
+                        shuffledOthers[1]
+                    ].sort(() => Math.random() - 0.5); // Randomize order
+                } else {
+                    available = available.sort(() => Math.random() - 0.5);
+                    game.currentCards = available.slice(0, 3);
+                }
+            } else if (phase === 'complication') {
+                // In complication phase, ensure at least one problem card is offered if available
+                const problemCards = available.filter(c => c.role === 'problem');
+                const otherCards = available.filter(c => c.role !== 'problem');
+
+                if (problemCards.length > 0 && otherCards.length >= 2) {
+                    const shuffledProblems = problemCards.sort(() => Math.random() - 0.5);
+                    const shuffledOthers = otherCards.sort(() => Math.random() - 0.5);
+                    game.currentCards = [
+                        shuffledProblems[0],
+                        shuffledOthers[0],
+                        shuffledOthers[1]
+                    ].sort(() => Math.random() - 0.5);
+                } else {
+                    available = available.sort(() => Math.random() - 0.5);
+                    game.currentCards = available.slice(0, 3);
+                }
+            } else {
+                // Opening and middle phases - just shuffle and take 3
+                available = available.sort(() => Math.random() - 0.5);
+                game.currentCards = available.slice(0, 3);
+            }
+
+            if (game.currentCards.length < 3) {
+                // Not enough cards - trigger end state
                 endGame();
                 return;
             }
 
-            // Shuffle and take 3
-            const shuffled = available.sort(() => Math.random() - 0.5);
-            game.currentCards = shuffled.slice(0, 3);
+            // Check for phase transition and announce
+            const currentPhase = getStoryPhase();
+            if (currentPhase !== game.lastPhase) {
+                announcePhaseTransition(currentPhase);
+                game.lastPhase = currentPhase;
+            }
 
             // Create card elements
             game.currentCards.forEach((card, index) => {
@@ -1440,6 +1590,19 @@
             let mood = 'calm';
             let dialoguePool = DIALOGUE[card.tone] || DIALOGUE.calm;
 
+            // Special reactions for problem and resolution cards
+            if (card.role === 'problem') {
+                dialoguePool = DIALOGUE.problem;
+                mood = 'unsettled';
+                return { text: randomFrom(dialoguePool), mood: mood };
+            }
+
+            if (card.role === 'resolution') {
+                dialoguePool = DIALOGUE.resolution;
+                mood = 'pleased';
+                return { text: randomFrom(dialoguePool), mood: mood };
+            }
+
             // Check for theme repeat
             if (c.themes[card.theme] > 1) {
                 dialoguePool = DIALOGUE.themeRepeat;
@@ -1546,6 +1709,7 @@
         function newStory() {
             game.story = [];
             game.storyPhrases = null;
+            game.lastPhase = 'opening';
             game.coherence = { themes: {}, tones: {}, roles: {}, lastTone: null };
 
             const log = document.getElementById('story-log');
@@ -1684,25 +1848,63 @@
             if (storyLength === 0) return [];
             if (storyLength === 1) return [`Once, ${beats[0]}.`];
 
-            // Stitching phrases
-            const openings = ['Once,', 'At the beginning,', 'In the beginning,'];
-            const middles = ['Then,', 'Along the way,', 'And so,', 'In time,'];
-            const endings = ['At last,', 'In the end,', 'Finally,', 'And so it was that'];
-
             // Use stored phrases if available
-            let selectedPhrases;
-            if (game.storyPhrases && game.storyPhrases.length === storyLength) {
-                selectedPhrases = game.storyPhrases;
-            } else {
-                selectedPhrases = beats.map((beat, index) => {
-                    if (index === 0) return randomFrom(openings);
-                    if (index === storyLength - 1) return randomFrom(endings);
-                    return randomFrom(middles);
-                });
-                game.storyPhrases = selectedPhrases;
+            if (!game.storyPhrases || game.storyPhrases.length !== storyLength) {
+                game.storyPhrases = generateStitchingPhrases(storyLength);
             }
 
-            return beats.map((beat, index) => `${selectedPhrases[index]} ${beat}.`);
+            return beats.map((beat, index) => `${game.storyPhrases[index]} ${beat}.`);
+        }
+
+        function generateStitchingPhrases(storyLength) {
+            // Expanded stitching phrases
+            const openings = [
+                'Once,', 'At the beginning,', 'In the beginning,',
+                'It began when', 'There came a time when', 'Long ago,'
+            ];
+            const middles = [
+                'Then,', 'Along the way,', 'And so,', 'In time,',
+                'Before long,', 'As the journey continued,', 'Soon after,',
+                'Not long after,', 'And then,', 'Eventually,',
+                'As time passed,', 'Later,', 'When the moment came,'
+            ];
+            const complications = [
+                'But then,', 'However,', 'Yet,', 'Unexpectedly,',
+                'Against all odds,', 'Despite this,', 'Even so,'
+            ];
+            const endings = [
+                'At last,', 'In the end,', 'Finally,', 'And so it was that',
+                'When all was said and done,', 'In the final moment,', 'At journey\'s end,'
+            ];
+
+            const phrases = [];
+            let lastPhrase = null;
+
+            for (let i = 0; i < storyLength; i++) {
+                let pool;
+                if (i === 0) {
+                    pool = openings;
+                } else if (i === storyLength - 1) {
+                    pool = endings;
+                } else if (i >= 5 && i < storyLength - 2) {
+                    // Complication phase - mix in complication phrases
+                    pool = [...middles, ...complications];
+                } else {
+                    pool = middles;
+                }
+
+                // Pick a phrase that's different from the last one
+                let phrase = randomFromExcluding(pool, lastPhrase);
+                phrases.push(phrase);
+                lastPhrase = phrase;
+            }
+
+            return phrases;
+        }
+
+        function randomFromExcluding(arr, exclude) {
+            const filtered = arr.filter(item => item !== exclude);
+            return filtered.length > 0 ? randomFrom(filtered) : randomFrom(arr);
         }
 
         function displayBeatsSequentially(parts, element, withTTS) {
@@ -1762,38 +1964,16 @@
             if (storyLength === 0) return '';
             if (storyLength === 1) return `Once, ${beats[0]}.`;
 
-            // Stitching phrases
-            const openings = ['Once,', 'At the beginning,', 'In the beginning,'];
-            const middles = ['Then,', 'Along the way,', 'And so,', 'In time,'];
-            const endings = ['At last,', 'In the end,', 'Finally,', 'And so it was that'];
-
             // Use stored phrases if available (so display and TTS match)
-            let selectedPhrases;
-            if (game.storyPhrases && game.storyPhrases.length === storyLength) {
-                selectedPhrases = game.storyPhrases;
-            } else {
-                // Generate new phrases
-                selectedPhrases = beats.map((beat, index) => {
-                    if (index === 0) return randomFrom(openings);
-                    if (index === storyLength - 1) return randomFrom(endings);
-                    return randomFrom(middles);
-                });
-                // Store for consistent display/TTS
-                game.storyPhrases = selectedPhrases;
+            if (!game.storyPhrases || game.storyPhrases.length !== storyLength) {
+                game.storyPhrases = generateStitchingPhrases(storyLength);
             }
 
-            let parts = [];
-
-            beats.forEach((beat, index) => {
-                const phrase = selectedPhrases[index];
-                parts.push(`${phrase} ${beat}.`);
-            });
+            let parts = beats.map((beat, index) => `${game.storyPhrases[index]} ${beat}.`);
 
             if (forDisplay) {
-                // Return with line breaks for visual display
                 return parts.join('<br><br>');
             } else {
-                // Return plain text for TTS
                 return parts.join(' ');
             }
         }
@@ -1866,6 +2046,7 @@
             setTimeout(() => {
                 game.story = [];
                 game.storyPhrases = null;
+                game.lastPhase = 'opening';
                 game.coherence = { themes: {}, tones: {}, roles: {}, lastTone: null };
 
                 const log = document.getElementById('story-log');
