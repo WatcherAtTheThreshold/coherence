@@ -1476,21 +1476,18 @@
                     </div>
                 `;
 
-                // Flip on hover
-                cardEl.addEventListener('mouseenter', () => {
-                    if (!cardEl.classList.contains('selected') && !cardEl.classList.contains('faded')) {
+                // Click to flip, click again to select
+                cardEl.addEventListener('click', () => {
+                    if (cardEl.classList.contains('faded')) return;
+
+                    if (!cardEl.classList.contains('flipped')) {
+                        // First click - flip to reveal
                         cardEl.classList.add('flipped');
+                    } else {
+                        // Second click - select
+                        selectCard(index);
                     }
                 });
-
-                cardEl.addEventListener('mouseleave', () => {
-                    if (!cardEl.classList.contains('selected')) {
-                        cardEl.classList.remove('flipped');
-                    }
-                });
-
-                // Select on click
-                cardEl.addEventListener('click', () => selectCard(index));
 
                 container.appendChild(cardEl);
 
