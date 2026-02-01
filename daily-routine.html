@@ -460,29 +460,28 @@
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
 
-        const TILE_SIZE = 24;
-        const GRID_WIDTH = 20;
-        const GRID_HEIGHT = 14;
+        const TILE_SIZE = 20;
+        const GRID_WIDTH = 28;
+        const GRID_HEIGHT = 18;
 
         const TILE = {
             FLOOR: 0,
             WALL: 1,
             RUG: 2,
-            STATION_MUSIC: 3,
-            STATION_DIGITAL: 4,
-            STATION_CRAFT: 5
+            PLATFORM: 3
         };
 
         const COLORS = {
-            floor: '#1e1a17',
-            floorAlt: '#1a1614',
-            wall: '#12100e',
-            wallTop: '#2a2520',
-            rug: '#2d2822',
-            rugPattern: '#352f28',
-            stationBase: '#252220',
-            stationGlow: 'rgba(212, 165, 116, 0.15)',
-            stationActive: 'rgba(212, 165, 116, 0.4)'
+            floor: '#1a1816',
+            floorAlt: '#1e1a17',
+            wall: '#0f0e0d',
+            wallTop: '#1a1816',
+            rug: '#2a2520',
+            rugAlt: '#252220',
+            platform: '#1e1c1a',
+            platformAlt: '#222018',
+            stationGlow: 'rgba(212, 165, 116, 0.2)',
+            stationActive: 'rgba(212, 165, 116, 0.5)'
         };
 
         // ============================================
@@ -490,7 +489,7 @@
         // ============================================
         const game = {
             grid: [],
-            player: { x: 10, y: 10 },
+            player: { x: 14, y: 9 },
             facing: 'down',
             projectsCompleted: 0,
             energy: 100,
@@ -501,9 +500,9 @@
         };
 
         const STATIONS = {
-            music: { x: 3, y: 3, w: 3, h: 2, name: 'The Keyboard', icon: '🎹' },
-            digital: { x: 9, y: 2, w: 3, h: 2, name: 'The Workstation', icon: '🖥️' },
-            craft: { x: 15, y: 3, w: 3, h: 2, name: 'The Workshop', icon: '🪵' }
+            craft: { x: 3, y: 4, w: 4, h: 4, name: 'The Workshop', icon: '🎨', angled: true },
+            digital: { x: 11, y: 13, w: 4, h: 3, name: 'The Workstation', icon: '🖥️', angled: false },
+            music: { x: 20, y: 11, w: 4, h: 4, name: 'The Keyboard', icon: '🎹', angled: true }
         };
 
         // ============================================
@@ -652,21 +651,66 @@
             for (let y = 0; y < GRID_HEIGHT; y++) {
                 game.grid[y] = [];
                 for (let x = 0; x < GRID_WIDTH; x++) {
-                    // Walls on top
+                    // Wall at top
                     if (y < 2) {
                         game.grid[y][x] = TILE.WALL;
                     }
-                    // Floor
+                    // Floor everywhere else
                     else {
                         game.grid[y][x] = TILE.FLOOR;
                     }
                 }
             }
 
-            // Add rug in center
-            for (let y = 7; y < 12; y++) {
-                for (let x = 6; x < 14; x++) {
+            // Add the central rug area (L-shaped / irregular)
+            // Main horizontal section
+            for (let y = 6; y < 13; y++) {
+                for (let x = 7; x < 21; x++) {
                     game.grid[y][x] = TILE.RUG;
+                }
+            }
+            // Extension down to computer station
+            for (let y = 13; y < 16; y++) {
+                for (let x = 10; x < 16; x++) {
+                    game.grid[y][x] = TILE.RUG;
+                }
+            }
+            // Extension to craft station (top-left)
+            for (let y = 4; y < 7; y++) {
+                for (let x = 7; x < 12; x++) {
+                    game.grid[y][x] = TILE.RUG;
+                }
+            }
+            // Extension to music station (right)
+            for (let y = 9; y < 14; y++) {
+                for (let x = 19; x < 24; x++) {
+                    game.grid[y][x] = TILE.RUG;
+                }
+            }
+
+            // Add station platforms
+            // Craft platform (top-left, angled)
+            for (let y = 3; y < 8; y++) {
+                for (let x = 2; x < 8; x++) {
+                    if (y - 3 <= x - 2 && x + y < 13) {
+                        game.grid[y][x] = TILE.PLATFORM;
+                    }
+                }
+            }
+
+            // Music platform (bottom-right, angled)
+            for (let y = 10; y < 16; y++) {
+                for (let x = 19; x < 25; x++) {
+                    if ((y - 10) + (x - 19) >= 3 && x + (15 - y) > 22) {
+                        game.grid[y][x] = TILE.PLATFORM;
+                    }
+                }
+            }
+
+            // Digital platform (bottom-center)
+            for (let y = 13; y < 17; y++) {
+                for (let x = 10; x < 16; x++) {
+                    game.grid[y][x] = TILE.PLATFORM;
                 }
             }
         }
@@ -695,7 +739,11 @@
                             ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
                             break;
                         case TILE.RUG:
-                            ctx.fillStyle = (x + y) % 2 === 0 ? COLORS.rug : COLORS.rugPattern;
+                            ctx.fillStyle = (x + y) % 2 === 0 ? COLORS.rug : COLORS.rugAlt;
+                            ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                            break;
+                        case TILE.PLATFORM:
+                            ctx.fillStyle = (x + y) % 2 === 0 ? COLORS.platform : COLORS.platformAlt;
                             ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
                             break;
                     }
@@ -703,9 +751,9 @@
             }
 
             // Draw stations
-            drawStation(STATIONS.music, 'music');
-            drawStation(STATIONS.digital, 'digital');
             drawStation(STATIONS.craft, 'craft');
+            drawStation(STATIONS.digital, 'digital');
+            drawStation(STATIONS.music, 'music');
 
             // Draw player
             drawPlayer();
@@ -715,89 +763,56 @@
         }
 
         function drawStation(station, type) {
-            const px = station.x * TILE_SIZE;
-            const py = station.y * TILE_SIZE;
-            const pw = station.w * TILE_SIZE;
-            const ph = station.h * TILE_SIZE;
-
             const isNear = game.nearStation === type;
+            const cx = station.x * TILE_SIZE + (station.w * TILE_SIZE) / 2;
+            const cy = station.y * TILE_SIZE + (station.h * TILE_SIZE) / 2;
 
             // Glow effect when near
             if (isNear) {
                 ctx.fillStyle = COLORS.stationActive;
-                ctx.fillRect(px - 4, py - 4, pw + 8, ph + 8);
+                ctx.beginPath();
+                ctx.arc(cx, cy, station.w * TILE_SIZE / 2 + 8, 0, Math.PI * 2);
+                ctx.fill();
             }
 
-            // Station base (desk/table)
-            ctx.fillStyle = COLORS.stationBase;
-            ctx.fillRect(px, py, pw, ph);
-
-            // Station top highlight
-            ctx.fillStyle = isNear ? '#3a3530' : '#2a2520';
-            ctx.fillRect(px + 2, py + 2, pw - 4, ph - 8);
-
-            // Draw station-specific items
-            const cx = px + pw / 2;
-            const cy = py + ph / 2;
-
-            ctx.font = '20px serif';
+            // Draw icon
+            ctx.font = '28px serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(station.icon, cx, cy - 4);
+            ctx.fillText(station.icon, cx, cy);
 
             // Station name when near
             if (isNear) {
-                ctx.font = '9px "IBM Plex Mono"';
+                ctx.font = '10px "IBM Plex Mono"';
                 ctx.fillStyle = '#d4a574';
-                ctx.fillText(station.name, cx, py + ph + 12);
+                ctx.fillText(station.name, cx, cy + station.h * TILE_SIZE / 2 + 14);
             }
         }
 
         function drawPlayer() {
             const px = game.player.x * TILE_SIZE + TILE_SIZE / 2;
             const py = game.player.y * TILE_SIZE + TILE_SIZE / 2;
-            const s = TILE_SIZE / 20;
 
-            // Gentle bob animation
-            const bob = Math.sin(Date.now() / 400) * 0.5;
+            // Simple pixel character like in the mockup
+            const size = TILE_SIZE * 0.8;
 
             // Shadow
-            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.fillStyle = 'rgba(0,0,0,0.25)';
             ctx.beginPath();
-            ctx.ellipse(px, py + 7 * s, 5 * s, 2.5 * s, 0, 0, Math.PI * 2);
+            ctx.ellipse(px, py + size/2 + 2, size/2, size/4, 0, 0, Math.PI * 2);
             ctx.fill();
 
-            // Body (cozy sweater)
-            ctx.fillStyle = '#6b5a4a';
-            ctx.fillRect(px - 4 * s, py - 3 * s + bob, 8 * s, 10 * s);
+            // Body (brown/tan sweater)
+            ctx.fillStyle = '#8b7355';
+            ctx.fillRect(px - size/3, py - size/4, size/1.5, size/1.5);
 
             // Head
-            ctx.fillStyle = '#e8c4a0';
-            ctx.beginPath();
-            ctx.arc(px, py - 5 * s + bob, 4 * s, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.fillStyle = '#c4a882';
+            ctx.fillRect(px - size/4, py - size/2 - 2, size/2, size/3);
 
-            // Hair
-            ctx.fillStyle = '#4a3a2a';
-            ctx.beginPath();
-            ctx.arc(px, py - 7 * s + bob, 4 * s, Math.PI, Math.PI * 2);
-            ctx.fill();
-            ctx.fillRect(px - 4 * s, py - 7 * s + bob, 8 * s, 2 * s);
-
-            // Eyes
-            ctx.fillStyle = '#202020';
-            ctx.fillRect(px - 2 * s, py - 5 * s + bob, 1.5 * s, 1.5 * s);
-            ctx.fillRect(px + 0.5 * s, py - 5 * s + bob, 1.5 * s, 1.5 * s);
-
-            // Arms
-            ctx.fillStyle = '#6b5a4a';
-            ctx.fillRect(px - 6 * s, py - 1 * s + bob, 2 * s, 6 * s);
-            ctx.fillRect(px + 4 * s, py - 1 * s + bob, 2 * s, 6 * s);
-
-            // Hands
-            ctx.fillStyle = '#e8c4a0';
-            ctx.fillRect(px - 6 * s, py + 4 * s + bob, 2 * s, 2 * s);
-            ctx.fillRect(px + 4 * s, py + 4 * s + bob, 2 * s, 2 * s);
+            // Hair (darker brown top)
+            ctx.fillStyle = '#5a4a3a';
+            ctx.fillRect(px - size/4, py - size/2 - 2, size/2, size/6);
         }
 
         // ============================================
@@ -821,15 +836,11 @@
             else if (dy < 0) game.facing = 'up';
 
             // Check bounds
-            if (newX < 0 || newX >= GRID_WIDTH || newY < 2 || newY >= GRID_HEIGHT) return;
+            if (newX < 0 || newX >= GRID_WIDTH || newY < 0 || newY >= GRID_HEIGHT) return;
 
-            // Check station collision
-            for (const [type, station] of Object.entries(STATIONS)) {
-                if (newX >= station.x && newX < station.x + station.w &&
-                    newY >= station.y && newY < station.y + station.h) {
-                    return;
-                }
-            }
+            // Check tile - can only walk on rug or platform
+            const tile = game.grid[newY][newX];
+            if (tile !== TILE.RUG && tile !== TILE.PLATFORM) return;
 
             game.player.x = newX;
             game.player.y = newY;
@@ -843,16 +854,20 @@
             game.nearStation = null;
 
             for (const [type, station] of Object.entries(STATIONS)) {
-                // Check if player is adjacent to station
-                const playerInRange =
-                    game.player.x >= station.x - 1 && game.player.x <= station.x + station.w &&
-                    game.player.y >= station.y - 1 && game.player.y <= station.y + station.h;
+                // Calculate distance to station center
+                const stationCX = station.x + station.w / 2;
+                const stationCY = station.y + station.h / 2;
+                const dist = Math.sqrt(
+                    Math.pow(game.player.x - stationCX, 2) +
+                    Math.pow(game.player.y - stationCY, 2)
+                );
 
-                if (playerInRange) {
+                // Check if player is close enough (within radius)
+                if (dist < station.w + 1) {
                     game.nearStation = type;
 
-                    // Wizard comments on station
-                    if (Math.random() < 0.1) {
+                    // Wizard comments on station (rarely)
+                    if (Math.random() < 0.05) {
                         const dialogueKey = type === 'music' ? 'music' : type === 'digital' ? 'digital' : 'craft';
                         wizardSpeak(randomFrom(WIZARD_DIALOGUE[dialogueKey]), 'curious');
                     }
