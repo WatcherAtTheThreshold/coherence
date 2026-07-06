@@ -43,86 +43,56 @@
             overflow-x: hidden;
         }
 
-        .container {
-            position: relative;
-            text-align: center;
-        }
-
-        /* Wrapper for scaling on large screens */
-        .game-wrapper {
-            display: inline-block;
-            transform-origin: center center;
-        }
-
-        /* Scale up on larger screens - conservative to keep header and footer visible */
-        @media (min-width: 1000px) and (min-height: 850px) {
-            .game-wrapper {
-                transform: scale(1.05);
-            }
-        }
-
-        @media (min-width: 1300px) and (min-height: 950px) {
-            .game-wrapper {
-                transform: scale(1.15);
-            }
-        }
-
-        @media (min-width: 1700px) and (min-height: 1100px) {
-            .game-wrapper {
-                transform: scale(1.25);
-            }
+        /* The arena IS the page — canvas fills the window, chrome floats */
+        #game-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            touch-action: none;
         }
 
         header {
-            margin-bottom: 1.5rem;
-            padding-top: 1rem;
+            position: fixed;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 10;
+            pointer-events: none;
             animation: fadeIn 1.5s ease-out;
         }
 
         h1 {
             font-family: 'Cormorant Garamond', serif;
-            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            font-size: clamp(1.2rem, 2.6vw, 1.7rem);
             font-weight: 400;
             letter-spacing: 0.4rem;
             text-transform: uppercase;
             color: var(--text-bright);
-            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 14px rgba(0, 0, 0, 0.6);
         }
 
         .subtitle {
-            font-size: clamp(0.65rem, 1.5vw, 0.8rem);
+            font-size: clamp(0.6rem, 1.3vw, 0.72rem);
             color: var(--text-dim);
             letter-spacing: 0.25rem;
             text-transform: lowercase;
             font-style: italic;
         }
 
-        #game-container {
-            background: var(--earth-warm);
-            border: 1px solid #3d3832;
-            padding: 0;
-            border-radius: 2px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-            animation: fadeIn 1.5s ease-out 0.3s both;
-            display: inline-block;
-            overflow: hidden;
-            position: relative;
-            max-width: 100%;
-        }
-
-        #game-canvas {
-            display: block;
-            image-rendering: pixelated;
-            image-rendering: crisp-edges;
-            max-width: 100%;
-            height: auto;
-        }
-
         .status {
-            margin-top: 1rem;
-            font-size: 0.9rem;
+            position: fixed;
+            bottom: 44px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            pointer-events: none;
+            font-size: 0.85rem;
             color: var(--text-mid);
             letter-spacing: 0.15rem;
+            text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7);
         }
 
         .status.player-turn {
@@ -134,64 +104,65 @@
         }
 
         .controls {
-            margin-top: 1rem;
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
+            position: fixed;
+            bottom: 14px;
+            right: 16px;
+            z-index: 20;
         }
 
         button {
             font-family: 'IBM Plex Mono', monospace;
-            font-size: 0.8rem;
-            padding: 0.6rem 1.5rem;
-            background: transparent;
-            border: 1px solid var(--text-dim);
+            font-size: 0.72rem;
+            padding: 5px 14px;
+            background: rgba(10, 10, 15, 0.4);
+            border: 1px solid rgba(107, 99, 90, 0.5);
+            border-radius: 999px;
             color: var(--text-dim);
             cursor: pointer;
-            transition: all 0.5s ease;
+            transition: all 0.4s ease;
             text-transform: lowercase;
             letter-spacing: 0.15rem;
         }
 
         button:hover,
         button:focus {
-            background: var(--text-dim);
-            color: var(--earth-deep);
+            color: var(--text-bright);
+            border-color: rgba(196, 184, 165, 0.5);
             outline: none;
         }
 
+        #mute-btn {
+            position: fixed;
+            top: 12px;
+            right: 14px;
+            z-index: 20;
+        }
+
         .instructions {
-            margin-top: 0.75rem;
-            margin-bottom: 1rem;
-            font-size: clamp(0.6rem, 1.3vw, 0.75rem);
+            position: fixed;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            pointer-events: none;
+            font-size: clamp(0.58rem, 1.2vw, 0.7rem);
             color: var(--text-dim);
             letter-spacing: 0.1rem;
             font-style: italic;
+            text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7);
         }
 
-        /* Mobile-specific adjustments */
-        @media (max-width: 480px) {
-            body {
-                padding: 0.5rem;
-            }
+        .lifetime {
+            margin-top: -0.6rem;
+            margin-bottom: 1.2rem;
+            font-size: 0.68rem;
+            letter-spacing: 0.12rem;
+            color: var(--text-dim);
+            min-height: 1em;
+        }
 
-            header {
-                margin-bottom: 0.5rem;
-            }
-
-            .status {
-                font-size: 0.8rem;
-            }
-
-            .controls {
-                margin-top: 0.75rem;
-            }
-
-            .instructions {
-                font-size: 0.6rem;
-                margin-top: 0.5rem;
-            }
+        @media (prefers-reduced-motion: reduce) {
+            header { animation: none; }
         }
 
         /* Audio init overlay */
@@ -263,30 +234,26 @@
         <div class="init-content">
             <h2>Wizard Masters</h2>
             <p>elemental wizards clash on the shifting board</p>
+            <div class="lifetime" id="title-lifetime"></div>
             <button id="init-btn" onclick="initGame()" autofocus>begin</button>
         </div>
     </div>
 
-    <div class="container">
-        <header>
-            <h1>Wizard Masters</h1>
-            <div class="subtitle">elemental tactics</div>
-        </header>
+    <canvas id="game-canvas" width="600" height="600"></canvas>
+    <button id="mute-btn" aria-label="toggle sound">sound on</button>
 
-        <div class="game-wrapper">
-            <div id="game-container">
-                <canvas id="game-canvas" width="600" height="600"></canvas>
-            </div>
+    <header>
+        <h1>Wizard Masters</h1>
+        <div class="subtitle">elemental tactics</div>
+    </header>
 
-            <div id="status" class="status player-turn">your move</div>
+    <div id="status" class="status player-turn">your move</div>
 
-            <div class="controls">
-                <button onclick="resetGame()">new game</button>
-            </div>
-
-            <div class="instructions">drag to move · green = advantage · red = disadvantage · click wizards to emote</div>
-        </div>
+    <div class="controls">
+        <button onclick="resetGame()">new game [r]</button>
     </div>
+
+    <div class="instructions">drag to move · green = advantage · red = disadvantage · click wizards to emote</div>
 
     <!-- Audio -->
     <audio id="music" loop>
@@ -303,6 +270,39 @@
         const music = document.getElementById('music');
         const statusEl = document.getElementById('status');
 
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        // ============================================
+        // PERSISTENCE — the arena keeps score
+        // ============================================
+
+        const SAVE_KEY = 'wizard-masters-save';
+
+        function loadSave() {
+            try {
+                const raw = localStorage.getItem(SAVE_KEY);
+                if (raw) return Object.assign(defaultSave(), JSON.parse(raw));
+            } catch (e) { /* private mode — play without memory */ }
+            return defaultSave();
+        }
+        function defaultSave() { return { wins: 0, losses: 0, bestStanding: 0, muted: false }; }
+        function persist() {
+            try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
+        }
+        const save = loadSave();
+        let muted = save.muted;
+
+        function setMuted(m) {
+            muted = m;
+            save.muted = m;
+            persist();
+            music.muted = m;
+            document.getElementById('mute-btn').textContent = m ? 'sound off' : 'sound on';
+        }
+
+        // View: the game space (board + side margins) floats centered in the window
+        let W = 0, H = 0, originX = 0, originY = 0;
+
         // ============================================
         // AUDIO SYSTEM
         // ============================================
@@ -315,7 +315,7 @@
         }
 
         function playMove() {
-            if (!audioContext) return;
+            if (!audioContext || muted) return;
             const now = audioContext.currentTime;
             const osc = audioContext.createOscillator();
             const gain = audioContext.createGain();
@@ -331,7 +331,7 @@
         }
 
         function playCapture() {
-            if (!audioContext) return;
+            if (!audioContext || muted) return;
             const now = audioContext.currentTime;
 
             // Impact sound
@@ -361,7 +361,7 @@
         }
 
         function playVictory() {
-            if (!audioContext) return;
+            if (!audioContext || muted) return;
             const now = audioContext.currentTime;
             const notes = [523, 659, 784, 1047];
             notes.forEach((freq, i) => {
@@ -379,7 +379,7 @@
         }
 
         function playDeflect() {
-            if (!audioContext) return;
+            if (!audioContext || muted) return;
             const now = audioContext.currentTime;
             const osc = audioContext.createOscillator();
             const gain = audioContext.createGain();
@@ -395,7 +395,7 @@
         }
 
         function playEmote() {
-            if (!audioContext) return;
+            if (!audioContext || muted) return;
             const now = audioContext.currentTime;
             const osc = audioContext.createOscillator();
             const gain = audioContext.createGain();
@@ -451,14 +451,15 @@
             }
         }
 
-        function updateParticles() {
+        function updateParticles(frames) {
+            const f = frames || 1;
             const s = CELL_SIZE / 50; // Scale factor
             for (let i = game.particles.length - 1; i >= 0; i--) {
                 const p = game.particles[i];
-                p.x += p.vx;
-                p.y += p.vy;
-                p.vy += 0.1 * s; // gravity
-                p.life -= p.decay;
+                p.x += p.vx * f;
+                p.y += p.vy * f;
+                p.vy += 0.1 * s * f; // gravity
+                p.life -= p.decay * f;
                 if (p.life <= 0) {
                     game.particles.splice(i, 1);
                 }
@@ -485,29 +486,32 @@
         let BOARD_OFFSET_X = 0; // Will be set based on side margin
         const BOARD_OFFSET_Y = 0;
 
-        // Calculate optimal cell size based on viewport
-        function calculateCellSize() {
-            const padding = 40; // Account for body padding and margins
-            const headerHeight = 120; // Header height with margin
-            const controlsHeight = 160; // Controls/status/instructions height with margin
-            const maxWidth = window.innerWidth - padding;
-            const maxHeight = window.innerHeight - headerHeight - controlsHeight - padding;
-            const maxBoardSize = Math.min(maxWidth, maxHeight, 500); // Cap at 500px max for comfortable fit
-            const cellSize = Math.floor(maxBoardSize / GRID_SIZE);
-            // Minimum cell size of 25px to keep game playable
-            return Math.max(25, cellSize);
-        }
-
         // Side margin for fallen wizards (as proportion of cell size)
         const SIDE_MARGIN_CELLS = 1.5;
 
+        // Calculate optimal cell size based on viewport — no more 500px cap;
+        // the board grows into the arena on large screens
+        function calculateCellSize() {
+            const maxByWidth = (window.innerWidth * 0.9) / (GRID_SIZE + SIDE_MARGIN_CELLS * 2);
+            const maxByHeight = (window.innerHeight * 0.74) / GRID_SIZE;
+            return Math.max(25, Math.floor(Math.min(maxByWidth, maxByHeight)));
+        }
+
         function resizeCanvas() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            canvas.width = W;
+            canvas.height = H;
+
             CELL_SIZE = calculateCellSize();
             const boardSize = CELL_SIZE * GRID_SIZE;
             const sideMargin = CELL_SIZE * SIDE_MARGIN_CELLS;
-            canvas.width = boardSize + sideMargin * 2;
-            canvas.height = boardSize;
+            const gameW = boardSize + sideMargin * 2;
             BOARD_OFFSET_X = sideMargin;
+
+            // Center the game space in the window, nudged down past the title
+            originX = (W - gameW) / 2;
+            originY = (H - boardSize) / 2 + H * 0.02;
 
             // Update wizard positions to match new cell size
             for (const wizard of [...game.playerWizards, ...game.enemyWizards]) {
@@ -580,10 +584,10 @@
             emoteTimer: 0
         };
 
-        // Initialize ambient particles
+        // Initialize ambient particles — dust drifts through the whole arena
         function initAmbientParticles() {
             game.ambientParticles = [];
-            const count = 8; // Subtle, not overwhelming
+            const count = reducedMotion ? 5 : Math.max(10, Math.min(28, Math.round((W * H) / 80000)));
             for (let i = 0; i < count; i++) {
                 spawnAmbientParticle();
             }
@@ -601,14 +605,15 @@
             });
         }
 
-        function updateAmbientParticles() {
+        function updateAmbientParticles(frames) {
+            const f = frames || 1;
             for (const p of game.ambientParticles) {
-                p.x += p.vx;
-                p.y += p.vy;
-                p.phase += 0.02;
+                p.x += p.vx * f;
+                p.y += p.vy * f;
+                p.phase += 0.02 * f;
                 // Gentle horizontal drift
-                p.vx += (Math.random() - 0.5) * 0.02;
-                p.vx *= 0.99;
+                p.vx += (Math.random() - 0.5) * 0.02 * f;
+                p.vx *= Math.pow(0.99, f);
 
                 // Wrap around screen
                 if (p.y < -10) {
@@ -811,14 +816,20 @@
             if (game.playerWizards.length === 0) {
                 game.gameOver = true;
                 game.winner = 'enemy';
-                statusEl.textContent = 'defeat...';
+                save.losses++;
+                persist();
+                statusEl.textContent = 'defeat... [r] to try again';
                 statusEl.className = 'status enemy-turn';
                 return true;
             }
             if (game.enemyWizards.length === 0) {
                 game.gameOver = true;
                 game.winner = 'player';
-                statusEl.textContent = 'victory!';
+                const standing = game.playerWizards.length;
+                save.wins++;
+                if (standing > save.bestStanding) save.bestStanding = standing;
+                persist();
+                statusEl.textContent = 'victory! · ' + standing + ' wizard' + (standing === 1 ? '' : 's') + ' standing';
                 statusEl.className = 'status player-turn';
                 playVictory();
                 return true;
@@ -858,13 +869,19 @@
                         const toRow = wizard.row + dr;
                         if (isValidMove(wizard, toCol, toRow)) {
                             const targetWizard = getWizardAt(toCol, toRow);
+                            // Element-aware: a disadvantaged attack lets the
+                            // defender escape — the old AI threw moves away on those
+                            let captureScore = 0;
+                            if (targetWizard) {
+                                const adv = getAdvantage(wizard.element, targetWizard.element);
+                                captureScore = adv === 'advantage' ? 120 : adv === 'neutral' ? 90 : -40;
+                            }
                             validMoves.push({
                                 wizard,
                                 toCol,
                                 toRow,
                                 isCapture: !!targetWizard,
-                                // Prefer captures and moving toward player
-                                score: (targetWizard ? 100 : 0) + (wizard.col - toCol) * 5 + Math.random() * 10
+                                score: captureScore + (wizard.col - toCol) * 5 + Math.random() * 10
                             });
                         }
                     }
@@ -910,23 +927,15 @@
         }
 
         function touchToMouse(touch) {
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            return {
-                clientX: touch.clientX,
-                clientY: touch.clientY,
-                rect, scaleX, scaleY
-            };
+            return { clientX: touch.clientX, clientY: touch.clientY };
         }
 
+        // Screen pixels → game space (the board floats at originX/originY)
         function getCanvasPos(e) {
-            const rect = e.rect || canvas.getBoundingClientRect();
-            const scaleX = e.scaleX || canvas.width / rect.width;
-            const scaleY = e.scaleY || canvas.height / rect.height;
+            const rect = canvas.getBoundingClientRect();
             return {
-                x: (e.clientX - rect.left) * scaleX,
-                y: (e.clientY - rect.top) * scaleY
+                x: e.clientX - rect.left - originX,
+                y: e.clientY - rect.top - originY
             };
         }
 
@@ -1009,15 +1018,73 @@
         // ============================================
 
         function render() {
-            ctx.fillStyle = '#1a1612';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // === SCREEN SPACE: the arena hall around the board ===
+            drawEnvironment();
 
+            // === GAME SPACE: board and wizards, centered ===
+            ctx.save();
+            ctx.translate(originX, originY);
             drawBoard();
-            drawAmbientParticles();
             drawValidMoves();
             drawWizards();
             drawFallenWizards();
             drawParticles();
+            ctx.restore();
+
+            drawAmbientParticles();
+            drawVignette();
+        }
+
+        function drawEnvironment() {
+            // Deep hall gradient
+            const bg = ctx.createLinearGradient(0, 0, 0, H);
+            bg.addColorStop(0, '#0a0a12');
+            bg.addColorStop(0.55, '#14110d');
+            bg.addColorStop(1, '#1d1812');
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, W, H);
+
+            // Element auroras drifting high in the hall
+            const t = reducedMotion ? 0 : performance.now() / 1000;
+            drawAurora(W * (0.18 + Math.sin(t * 0.05) * 0.06), H * 0.16, W * 0.30, 'rgba(160, 112, 192, 0.055)');
+            drawAurora(W * (0.80 + Math.cos(t * 0.04) * 0.05), H * 0.12, W * 0.26, 'rgba(80, 128, 176, 0.055)');
+            drawAurora(W * (0.5 + Math.sin(t * 0.03 + 2) * 0.08), H * 0.05, W * 0.34, 'rgba(224, 112, 80, 0.035)');
+
+            // Arena light pooled around the board — tinted by the victor
+            const boardPix = GRID_SIZE * CELL_SIZE;
+            const cx = W / 2;
+            const cy = originY + boardPix / 2;
+            let glowColor = 'rgba(212, 165, 116, 0.10)';
+            if (game.gameOver) {
+                glowColor = game.winner === 'player' ? 'rgba(80, 128, 176, 0.17)' : 'rgba(224, 112, 80, 0.15)';
+            }
+            const arena = ctx.createRadialGradient(cx, cy, boardPix * 0.2, cx, cy, Math.max(W, H) * 0.62);
+            arena.addColorStop(0, glowColor);
+            arena.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = arena;
+            ctx.fillRect(0, 0, W, H);
+
+            // Board shadow grounds it in the hall
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+            ctx.beginPath();
+            ctx.ellipse(cx, originY + boardPix + 16, boardPix * 0.62, 24, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawAurora(x, y, r, color) {
+            const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+            g.addColorStop(0, color);
+            g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = g;
+            ctx.fillRect(x - r, y - r, r * 2, r * 2);
+        }
+
+        function drawVignette() {
+            const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.42, W / 2, H / 2, Math.max(W, H) * 0.75);
+            vg.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            vg.addColorStop(1, 'rgba(0, 0, 0, 0.4)');
+            ctx.fillStyle = vg;
+            ctx.fillRect(0, 0, W, H);
         }
 
         function drawBoard() {
@@ -1052,7 +1119,7 @@
             for (let i = 0; i <= GRID_SIZE; i++) {
                 ctx.beginPath();
                 ctx.moveTo(BOARD_OFFSET_X + i * CELL_SIZE, 0);
-                ctx.lineTo(BOARD_OFFSET_X + i * CELL_SIZE, canvas.height);
+                ctx.lineTo(BOARD_OFFSET_X + i * CELL_SIZE, GRID_SIZE * CELL_SIZE);
                 ctx.stroke();
 
                 ctx.beginPath();
@@ -1479,7 +1546,10 @@
         // ANIMATION LOOP
         // ============================================
 
-        function update() {
+        function update(frames) {
+            // frame-rate independent easing: same curve at 60Hz and 144Hz
+            const ease = 1 - Math.pow(0.8, frames);
+
             // Update moving wizard animation
             if (game.animatingWizard && game.animatingWizard.isMoving) {
                 const wizard = game.animatingWizard;
@@ -1502,8 +1572,8 @@
                     }
                 } else {
                     // Ease toward target
-                    wizard.animX += dx * 0.2;
-                    wizard.animY += dy * 0.2;
+                    wizard.animX += dx * ease;
+                    wizard.animY += dy * ease;
                 }
             }
 
@@ -1524,28 +1594,28 @@
                         wizard.isResting = true;
                     } else {
                         // Walk toward resting position
-                        const speed = 3 * s;
-                        wizard.animX += (dx / dist) * speed;
-                        wizard.animY += (dy / dist) * speed;
+                        const speed = 3 * s * frames;
+                        wizard.animX += (dx / dist) * Math.min(speed, dist);
+                        wizard.animY += (dy / dist) * Math.min(speed, dist);
                     }
                 }
 
                 // Update idle animation for resting wizards too
-                if (wizard.isResting) {
-                    wizard.idlePhase += 0.015; // Slower breathing for resting wizards
+                if (wizard.isResting && !reducedMotion) {
+                    wizard.idlePhase += 0.015 * frames; // Slower breathing for resting wizards
                     wizard.idleOffset = Math.sin(wizard.idlePhase) * 0.5;
                 }
             }
 
             // Update particles
-            updateParticles();
+            updateParticles(frames);
 
             // Update ambient dust particles
-            updateAmbientParticles();
+            updateAmbientParticles(frames);
 
             // Fade scorch marks slowly
             for (let i = game.scorchMarks.length - 1; i >= 0; i--) {
-                game.scorchMarks[i].opacity -= 0.0005;
+                game.scorchMarks[i].opacity -= 0.0005 * frames;
                 if (game.scorchMarks[i].opacity <= 0) {
                     game.scorchMarks.splice(i, 1);
                 }
@@ -1553,7 +1623,7 @@
 
             // Update emote timer
             if (game.emoteWizard) {
-                game.emoteTimer--;
+                game.emoteTimer -= frames;
                 if (game.emoteTimer <= 0) {
                     game.emoteWizard = null;
                 }
@@ -1561,15 +1631,19 @@
 
             // Update idle animations for all wizards
             for (const wizard of [...game.playerWizards, ...game.enemyWizards]) {
-                if (!wizard.isMoving && wizard !== game.dragging) {
-                    wizard.idlePhase += 0.02;
+                if (!wizard.isMoving && wizard !== game.dragging && !reducedMotion) {
+                    wizard.idlePhase += 0.02 * frames;
                     wizard.idleOffset = Math.sin(wizard.idlePhase) * 0.8;
                 }
             }
         }
 
-        function gameLoop() {
-            update();
+        let lastFrameTime = 0;
+
+        function gameLoop(timestamp) {
+            const dt = Math.min(50, timestamp - lastFrameTime);
+            lastFrameTime = timestamp;
+            update(dt / 16.67);
             render();
             requestAnimationFrame(gameLoop);
         }
@@ -1581,7 +1655,9 @@
         function initGame() {
             initAudio();
             music.volume = 0.3;
+            setMuted(muted); // apply persisted preference
             music.play().catch(err => console.log('Audio error:', err));
+            lastFrameTime = performance.now();
 
             document.getElementById('audio-init').classList.add('hidden');
 
@@ -1623,14 +1699,37 @@
             statusEl.className = 'status player-turn';
         }
 
-        // Keyboard support for init
+        // Keyboard support
         document.addEventListener('keydown', (e) => {
             const audioInitActive = !document.getElementById('audio-init').classList.contains('hidden');
             if (audioInitActive && (e.key === 'Enter' || e.key === ' ')) {
                 e.preventDefault();
                 initGame();
+                return;
             }
+            if (e.key === 'm' || e.key === 'M') setMuted(!muted);
+            if ((e.key === 'r' || e.key === 'R') && !audioInitActive) resetGame();
         });
+
+        document.getElementById('mute-btn').addEventListener('click', () => setMuted(!muted));
+
+        // Don't let a background tab register as a huge frame
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) lastFrameTime = performance.now();
+        });
+
+        // The arena keeps score (shown before you begin)
+        (function () {
+            document.getElementById('mute-btn').textContent = muted ? 'sound off' : 'sound on';
+            if (save.wins > 0 || save.losses > 0) {
+                let line = save.wins + ' victor' + (save.wins === 1 ? 'y' : 'ies') + ' · ' +
+                    save.losses + ' defeat' + (save.losses === 1 ? '' : 's');
+                if (save.bestStanding > 0) {
+                    line += ' · best: ' + save.bestStanding + ' standing';
+                }
+                document.getElementById('title-lifetime').textContent = line;
+            }
+        })();
     </script>
 </body>
 </html>
