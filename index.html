@@ -19,6 +19,7 @@
             --accent-cosmic: #a070c0;
             --accent-cold: #74b9ff;
             --accent-gold: #e8c080;
+            --accent-ember: #e8a050;
         }
 
         * {
@@ -116,12 +117,13 @@
         }
 
         /* Fan rotation - outer cards offset down to compensate for rotation lift */
-        .card-flip:nth-child(1) { transform: rotate(-10deg) translateY(12px); }
-        .card-flip:nth-child(2) { transform: rotate(-6deg) translateY(5px); }
-        .card-flip:nth-child(3) { transform: rotate(-2deg) translateY(1px); }
-        .card-flip:nth-child(4) { transform: rotate(2deg) translateY(1px); }
-        .card-flip:nth-child(5) { transform: rotate(6deg) translateY(5px); }
-        .card-flip:nth-child(6) { transform: rotate(10deg) translateY(12px); }
+        .card-flip:nth-child(1) { transform: rotate(-12deg) translateY(16px); }
+        .card-flip:nth-child(2) { transform: rotate(-8deg) translateY(8px); }
+        .card-flip:nth-child(3) { transform: rotate(-4deg) translateY(3px); }
+        .card-flip:nth-child(4) { transform: rotate(0deg) translateY(1px); }
+        .card-flip:nth-child(5) { transform: rotate(4deg) translateY(3px); }
+        .card-flip:nth-child(6) { transform: rotate(8deg) translateY(8px); }
+        .card-flip:nth-child(7) { transform: rotate(12deg) translateY(16px); }
 
         .card-flip-inner {
             position: relative;
@@ -194,6 +196,7 @@
         .card-flip:nth-child(4) .card-title { color: var(--accent-cosmic); }
         .card-flip:nth-child(5) .card-title { color: var(--accent-cold); }
         .card-flip:nth-child(6) .card-title { color: var(--accent-gold); }
+        .card-flip:nth-child(7) .card-title { color: var(--accent-ember); }
 
         /* Container hover - spread cards */
         .card-spread:hover .card-flip {
@@ -247,37 +250,28 @@
             box-shadow: 0 8px 30px rgba(232, 192, 128, 0.2);
         }
 
-        /* Restore final rotation after animation - smooth easing */
-        .card-flip:nth-child(1) { animation: cardIn1 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.05s both; }
-        .card-flip:nth-child(2) { animation: cardIn2 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.11s both; }
-        .card-flip:nth-child(3) { animation: cardIn3 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.17s both; }
-        .card-flip:nth-child(4) { animation: cardIn4 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.23s both; }
-        .card-flip:nth-child(5) { animation: cardIn5 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.29s both; }
-        .card-flip:nth-child(6) { animation: cardIn6 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) 0.35s both; }
+        .card-flip:nth-child(7):hover .card-front {
+            border-color: rgba(232, 160, 80, 0.5);
+            box-shadow: 0 8px 30px rgba(232, 160, 80, 0.2);
+        }
 
-        @keyframes cardIn1 {
+        /* Entrance: a from-only keyframe lands on each card's natural fan
+           rotation, so one animation serves any number of cards */
+        .card-flip { animation: cardIn 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) both; }
+        .card-flip:nth-child(1) { animation-delay: 0.05s; }
+        .card-flip:nth-child(2) { animation-delay: 0.11s; }
+        .card-flip:nth-child(3) { animation-delay: 0.17s; }
+        .card-flip:nth-child(4) { animation-delay: 0.23s; }
+        .card-flip:nth-child(5) { animation-delay: 0.29s; }
+        .card-flip:nth-child(6) { animation-delay: 0.35s; }
+        .card-flip:nth-child(7) { animation-delay: 0.41s; }
+
+        @keyframes cardIn {
             from { opacity: 0; transform: translateY(30px) rotate(0deg) scale(0.95); }
-            to { opacity: 1; transform: rotate(-10deg) translateY(12px); }
         }
-        @keyframes cardIn2 {
-            from { opacity: 0; transform: translateY(30px) rotate(0deg) scale(0.95); }
-            to { opacity: 1; transform: rotate(-6deg) translateY(5px); }
-        }
-        @keyframes cardIn3 {
-            from { opacity: 0; transform: translateY(30px) rotate(0deg) scale(0.95); }
-            to { opacity: 1; transform: rotate(-2deg) translateY(1px); }
-        }
-        @keyframes cardIn4 {
-            from { opacity: 0; transform: translateY(30px) rotate(0deg) scale(0.95); }
-            to { opacity: 1; transform: rotate(2deg) translateY(1px); }
-        }
-        @keyframes cardIn5 {
-            from { opacity: 0; transform: translateY(30px) rotate(0deg) scale(0.95); }
-            to { opacity: 1; transform: rotate(6deg) translateY(5px); }
-        }
-        @keyframes cardIn6 {
-            from { opacity: 0; transform: translateY(30px) rotate(0deg) scale(0.95); }
-            to { opacity: 1; transform: rotate(10deg) translateY(12px); }
+
+        @media (prefers-reduced-motion: reduce) {
+            .card-flip, header, footer { animation: none !important; }
         }
 
         footer {
@@ -365,7 +359,7 @@
     <div class="container">
         <header>
             <h1>Coherence</h1>
-            <p class="tagline">six meditations on presence, patience, and the quiet act of tending</p>
+            <p class="tagline">seven meditations on presence, patience, and the quiet act of tending</p>
         </header>
 
         <nav class="card-spread">
@@ -585,6 +579,42 @@
                         </div>
                         <div class="card-title">Journey</div>
                         <div class="card-subtitle">build a story</div>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Ember Card - Campfire -->
+            <a href="ember.html" class="card-flip">
+                <div class="card-flip-inner">
+                    <div class="card-front">
+                        <div class="card-icon">
+                            <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <!-- Warm fire glow -->
+                                <defs>
+                                    <radialGradient id="emberGlow" cx="50%" cy="60%" r="50%">
+                                        <stop offset="0%" stop-color="#e8a050" stop-opacity="0.45"/>
+                                        <stop offset="100%" stop-color="#e8a050" stop-opacity="0"/>
+                                    </radialGradient>
+                                </defs>
+                                <circle cx="30" cy="34" r="26" fill="url(#emberGlow)"/>
+                                <!-- Flame: outer, mid, core -->
+                                <path d="M30 8 C38 18 42 26 42 34 C42 42 36 47 30 47 C24 47 18 42 18 34 C18 26 22 18 30 8 Z"
+                                      fill="#c46a30" fill-opacity="0.85"/>
+                                <path d="M30 18 C35 25 37 30 37 35 C37 40 33 44 30 44 C27 44 23 40 23 35 C23 30 25 25 30 18 Z"
+                                      fill="#e8a050"/>
+                                <path d="M30 27 C32.5 31 34 34 34 37 C34 40 32 42 30 42 C28 42 26 40 26 37 C26 34 27.5 31 30 27 Z"
+                                      fill="#f5dfa0"/>
+                                <!-- Logs -->
+                                <rect x="14" y="46" width="32" height="5" rx="2.5" fill="#241a12" transform="rotate(-6 30 48)"/>
+                                <rect x="15" y="49" width="30" height="5" rx="2.5" fill="#3a2c1c" transform="rotate(5 30 51)"/>
+                                <!-- Rising sparks -->
+                                <circle cx="24" cy="14" r="1.2" fill="#e8a050" opacity="0.7"/>
+                                <circle cx="37" cy="10" r="1" fill="#f5dfa0" opacity="0.6"/>
+                                <circle cx="33" cy="5" r="0.8" fill="#e8a050" opacity="0.5"/>
+                            </svg>
+                        </div>
+                        <div class="card-title">Ember</div>
+                        <div class="card-subtitle">keep the fire</div>
                     </div>
                 </div>
             </a>

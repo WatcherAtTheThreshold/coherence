@@ -299,9 +299,25 @@
                 padding: 0.5rem;
             }
         }
+    
+        /* Back to the collection */
+        .hub-link {
+            position: fixed;
+            top: 14px;
+            left: 16px;
+            z-index: 20;
+            font-family: 'IBM Plex Mono', monospace;
+            color: rgba(196, 184, 165, 0.6);
+            text-decoration: none;
+            font-size: 0.72rem;
+            letter-spacing: 0.14rem;
+            transition: color 0.25s ease;
+        }
+        .hub-link:hover { color: rgba(231, 223, 207, 0.95); }
     </style>
 </head>
 <body>
+    <a class="hub-link" href="index.html">&larr; the hub</a>
     <!-- Audio init overlay -->
     <div id="audio-init">
         <div class="init-content">
