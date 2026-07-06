@@ -1641,7 +1641,10 @@
         let lastFrameTime = 0;
 
         function gameLoop(timestamp) {
-            const dt = Math.min(50, timestamp - lastFrameTime);
+            // Guard: a direct gameLoop() call has no timestamp — a NaN dt
+            // would poison every wizard's idle phase permanently
+            if (typeof timestamp !== 'number') timestamp = lastFrameTime;
+            const dt = Math.max(0, Math.min(50, timestamp - lastFrameTime));
             lastFrameTime = timestamp;
             update(dt / 16.67);
             render();
@@ -1678,7 +1681,7 @@
             statusEl.textContent = 'your move';
             statusEl.className = 'status player-turn';
 
-            gameLoop();
+            requestAnimationFrame(gameLoop);
         }
 
         function resetGame() {
