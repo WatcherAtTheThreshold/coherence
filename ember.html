@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EMBER</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap');
+
+:root {
+  --earth-deep: #14120f;
+  --paper: #e7dfcf;
+  --sand: #c4b8a5;
+  --text-dim: rgba(196, 184, 165, 0.6);
+  --text-mid: rgba(196, 184, 165, 0.82);
+  --text-bright: rgba(231, 223, 207, 0.95);
+  --ember: #e8a050;
+  --ember-deep: #c46a30;
+  --frost: #9ab8cc;
+  --panel: rgba(20, 18, 15, 0.82);
+  --border: rgba(196, 184, 165, 0.22);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: 'IBM Plex Mono', monospace;
+  background: var(--earth-deep);
+  color: var(--text-bright);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#scene {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: pointer;
+  touch-action: none;
+}
+
+/* ===== Corner chrome ===== */
+.hub-link {
+  position: fixed;
+  top: 14px;
+  left: 16px;
+  z-index: 20;
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 0.72rem;
+  letter-spacing: 0.14rem;
+  transition: color 0.25s ease;
+}
+.hub-link:hover { color: var(--text-bright); }
+
+.chrome-right {
+  position: fixed;
+  top: 12px;
+  right: 14px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#mute-btn {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.1rem;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: color 0.25s ease, border-color 0.25s ease;
+}
+#mute-btn:hover { color: var(--text-bright); border-color: rgba(231, 223, 207, 0.35); }
+
+/* ===== HUD ===== */
+#hud {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: none;
+  align-items: center;
+  gap: 14px;
+}
+#hud.visible { display: flex; }
+
+#wood-btn {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.85rem;
+  letter-spacing: 0.12rem;
+  color: var(--text-mid);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 12px 22px;
+  cursor: pointer;
+  transition: transform 0.1s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+#wood-btn:hover {
+  color: var(--text-bright);
+  border-color: rgba(232, 160, 80, 0.45);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4), 0 0 18px rgba(232, 160, 80, 0.12);
+}
+#wood-btn:active { transform: scale(0.96); }
+#wood-btn.empty { opacity: 0.45; cursor: default; }
+#wood-btn .key-hint { color: var(--text-dim); font-size: 0.68rem; }
+
+/* ===== Caption line ===== */
+#caption {
+  position: fixed;
+  bottom: 76px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+  max-width: 90vw;
+  text-align: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: clamp(0.95rem, 2.4vw, 1.2rem);
+  color: var(--text-mid);
+  letter-spacing: 0.06rem;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+  pointer-events: none;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.8);
+}
+#caption.visible { opacity: 1; }
+
+/* ===== Overlays ===== */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(12, 10, 8, 0.72);
+  backdrop-filter: blur(3px);
+}
+.overlay.visible { display: flex; }
+
+.overlay-content {
+  width: min(92vw, 460px);
+  padding: 2rem 1.75rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+  text-align: center;
+  animation: overlayIn 0.5s ease-out;
+}
+
+@keyframes overlayIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.overlay-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 600;
+  font-size: clamp(1.8rem, 5vw, 2.4rem);
+  letter-spacing: 0.35rem;
+  color: var(--paper);
+}
+
+.overlay-sub {
+  margin-top: 0.4rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.18rem;
+  color: var(--text-dim);
+  text-transform: lowercase;
+  font-style: italic;
+}
+
+.overlay-body {
+  margin: 1.25rem 0;
+  font-size: 0.82rem;
+  line-height: 1.9;
+  color: var(--text-mid);
+  letter-spacing: 0.04rem;
+}
+
+.overlay-body .accent { color: var(--ember); }
+.overlay-body .quiet { color: var(--text-dim); font-size: 0.72rem; }
+
+.tally {
+  margin: 1rem 0 1.25rem;
+  padding: 0.9rem 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+  line-height: 2;
+  color: var(--text-mid);
+  letter-spacing: 0.08rem;
+}
+.tally .big { font-size: 1.4rem; color: var(--ember); font-weight: 600; }
+
+.lifetime {
+  margin-top: 0.9rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.1rem;
+  color: var(--text-dim);
+  line-height: 1.9;
+}
+
+.overlay-buttons {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.overlay-buttons button, .overlay-buttons a {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.8rem;
+  letter-spacing: 0.12rem;
+  text-transform: lowercase;
+  text-decoration: none;
+  padding: 0.65rem 1.4rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-mid);
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.overlay-buttons .primary {
+  border-color: rgba(232, 160, 80, 0.5);
+  color: var(--ember);
+}
+
+.overlay-buttons button:hover, .overlay-buttons a:hover {
+  transform: translateY(-1px);
+  color: var(--text-bright);
+  border-color: rgba(231, 223, 207, 0.35);
+  box-shadow: 0 10px 26px rgba(0,0,0,0.35);
+}
+.overlay-buttons .primary:hover {
+  color: #f0c090;
+  border-color: rgba(232, 160, 80, 0.8);
+  box-shadow: 0 0 24px rgba(232, 160, 80, 0.18);
+}
+
+@media (max-width: 600px) {
+  #wood-btn { padding: 14px 26px; }
+  #caption { bottom: 88px; }
+}
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+
+<a class="hub-link" href="index.html">&larr; the hub</a>
+<div class="chrome-right">
+  <button id="mute-btn" aria-label="toggle sound">sound on</button>
+</div>
+
+<div id="hud">
+  <button id="wood-btn">feed the fire &times;<span id="wood-count">6</span> <span class="key-hint">[space]</span></button>
+</div>
+
+<div id="caption"></div>
+
+<!-- Title overlay (doubles as audio init — first click is the user gesture) -->
+<div class="overlay visible" id="title-overlay">
+  <div class="overlay-content">
+    <div class="overlay-title">EMBER</div>
+    <div class="overlay-sub">keep the fire until dawn</div>
+    <div class="overlay-body">
+      the night is five minutes long and colder at its center.<br>
+      <span class="accent">feed logs</span> to the fire &middot; <span class="accent">tap the flames</span> to breathe on the embers.<br>
+      strangers are drawn to a bright fire.<br>
+      warm them, and they rarely leave empty-handed.<br>
+      <span class="quiet">a tall fire burns wood faster &middot; a low fire draws no one</span>
+    </div>
+    <div class="lifetime" id="title-lifetime"></div>
+    <div class="overlay-buttons">
+      <button class="primary" id="start-btn" autofocus>light the fire</button>
+    </div>
+  </div>
+</div>
+
+<!-- End-of-night overlay -->
+<div class="overlay" id="end-overlay">
+  <div class="overlay-content">
+    <div class="overlay-title" id="end-title" style="font-size: clamp(1.3rem, 4vw, 1.8rem);"></div>
+    <div class="overlay-sub" id="end-sub"></div>
+    <div class="tally" id="end-tally"></div>
+    <div class="lifetime" id="end-lifetime"></div>
+    <div class="overlay-buttons">
+      <button class="primary" id="again-btn">another night [r]</button>
+      <a href="index.html">the hub</a>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ============================================================
+   EMBER — keep the fire until dawn
+   A benchmark game for the Coherence collection.
+   Single file, no dependencies, no audio assets (all procedural).
+   ============================================================ */
+
+/* ===== CONFIG ===== */
+const NIGHT_LENGTH = 300;         // seconds of real time, dusk to dawn
+const LOG_WARMTH = 26;            // warmth per log
+const BREATH_WARMTH = 4;          // warmth per breath
+const BREATH_COOLDOWN = 8;        // seconds — deliberately weaker than logs; breath is a bridge, not a fuel
+const START_WOOD = 6;
+const START_WARMTH = 68;
+const SIT_SLOTS = [-88, 96, -150, 158]; // x offsets around the fire for wanderers
+
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const PARTICLE_SCALE = reducedMotion ? 0.35 : 1;
+
+/* ===== PERSISTENCE ===== */
+const SAVE_KEY = 'ember-save';
+
+function loadSave() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (raw) return Object.assign(defaultSave(), JSON.parse(raw));
+  } catch (e) { /* private mode etc. — play without memory */ }
+  return defaultSave();
+}
+
+function defaultSave() {
+  return { nights: 0, kept: 0, totalWarmed: 0, bestWarmed: 0, muted: false };
+}
+
+function persist() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
+}
+
+const save = loadSave();
+
+/* ===== AUDIO (all procedural — no files) ===== */
+let actx = null;
+let masterGain = null;
+let windGain = null;
+let droneNodes = null;
+let noiseBuffer = null;
+
+function initAudioOnce() {
+  if (actx) return;
+  actx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = actx.createGain();
+  masterGain.gain.value = save.muted ? 0 : 1;
+  masterGain.connect(actx.destination);
+
+  // Shared noise buffer for wind / crackle / breath
+  const len = actx.sampleRate * 2;
+  noiseBuffer = actx.createBuffer(1, len, actx.sampleRate);
+  const data = noiseBuffer.getChannelData(0);
+  for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+
+  // Ambient drone: two soft detuned sines, barely there
+  const o1 = actx.createOscillator();
+  const o2 = actx.createOscillator();
+  const dg = actx.createGain();
+  o1.frequency.value = 55;
+  o2.frequency.value = 82.5;
+  o1.type = 'sine'; o2.type = 'sine';
+  dg.gain.value = 0.035;
+  o1.connect(dg); o2.connect(dg);
+  dg.connect(masterGain);
+  o1.start(); o2.start();
+  droneNodes = { o1, o2, dg };
+
+  // Wind: looped noise through a lowpass, gain rises with the cold
+  const wind = actx.createBufferSource();
+  wind.buffer = noiseBuffer;
+  wind.loop = true;
+  const windFilter = actx.createBiquadFilter();
+  windFilter.type = 'lowpass';
+  windFilter.frequency.value = 380;
+  windGain = actx.createGain();
+  windGain.gain.value = 0;
+  wind.connect(windFilter).connect(windGain).connect(masterGain);
+  wind.start();
+}
+
+function sfxCrackle() {
+  if (!actx) return;
+  const now = actx.currentTime;
+  const src = actx.createBufferSource();
+  src.buffer = noiseBuffer;
+  src.playbackRate.value = 0.7 + Math.random() * 0.8;
+  const bp = actx.createBiquadFilter();
+  bp.type = 'bandpass';
+  bp.frequency.value = 900 + Math.random() * 1600;
+  bp.Q.value = 2.5;
+  const g = actx.createGain();
+  g.gain.setValueAtTime(0.05 + Math.random() * 0.05, now);
+  g.gain.exponentialRampToValueAtTime(0.001, now + 0.06 + Math.random() * 0.05);
+  src.connect(bp).connect(g).connect(masterGain);
+  src.start(now, Math.random() * 1.5);
+  src.stop(now + 0.15);
+}
+
+function sfxLog() {
+  if (!actx) return;
+  const now = actx.currentTime;
+  const o = actx.createOscillator();
+  const g = actx.createGain();
+  o.type = 'triangle';
+  o.frequency.setValueAtTime(95, now);
+  o.frequency.exponentialRampToValueAtTime(55, now + 0.12);
+  g.gain.setValueAtTime(0.22, now);
+  g.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+  o.connect(g).connect(masterGain);
+  o.start(now); o.stop(now + 0.18);
+  // spray of crackles as the log lands
+  setTimeout(sfxCrackle, 60);
+  setTimeout(sfxCrackle, 140);
+}
+
+function sfxBreath() {
+  if (!actx) return;
+  const now = actx.currentTime;
+  const src = actx.createBufferSource();
+  src.buffer = noiseBuffer;
+  const hp = actx.createBiquadFilter();
+  hp.type = 'highpass';
+  hp.frequency.value = 900;
+  const g = actx.createGain();
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(0.12, now + 0.18);
+  g.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+  src.connect(hp).connect(g).connect(masterGain);
+  src.start(now, Math.random());
+  src.stop(now + 0.55);
+}
+
+function sfxChime(freqs, vol, spacing) {
+  if (!actx) return;
+  const now = actx.currentTime;
+  freqs.forEach((f, i) => {
+    const o = actx.createOscillator();
+    const g = actx.createGain();
+    o.type = 'sine';
+    o.frequency.value = f;
+    const t = now + i * spacing;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.7);
+    o.connect(g).connect(masterGain);
+    o.start(t); o.stop(t + 0.75);
+  });
+}
+
+const sfxArrival = () => sfxChime([440], 0.06, 0);
+const sfxGift = () => sfxChime([523, 784], 0.09, 0.12);
+const sfxDawn = () => sfxChime([392, 494, 587, 784], 0.08, 0.22);
+const sfxDeath = () => {
+  if (!actx) return;
+  const now = actx.currentTime;
+  const o = actx.createOscillator();
+  const g = actx.createGain();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(220, now);
+  o.frequency.exponentialRampToValueAtTime(55, now + 1.6);
+  g.gain.setValueAtTime(0.1, now);
+  g.gain.exponentialRampToValueAtTime(0.001, now + 1.8);
+  o.connect(g).connect(masterGain);
+  o.start(now); o.stop(now + 1.9);
+};
+
+function setMuted(m) {
+  save.muted = m;
+  persist();
+  if (masterGain) masterGain.gain.value = m ? 0 : 1;
+  document.getElementById('mute-btn').textContent = m ? 'sound off' : 'sound on';
+}
+
+/* ===== STATE ===== */
+const state = {};
+
+function resetNight() {
+  state.phase = 'playing';       // playing | dying | dawn | ended
+  state.t = 0;                   // seconds elapsed this night
+  state.warmth = START_WARMTH;   // 0..100
+  state.wood = START_WOOD;
+  state.breathCd = 0;
+  state.warmed = 0;
+  state.wanderers = [];
+  state.nextWanderer = 18 + Math.random() * 10;
+  state.snap = null;             // {warn, active} countdown timers
+  state.nextSnap = 55 + Math.random() * 25;
+  state.embers = [];             // flame particles
+  state.windParticles = [];
+  state.sparkles = [];           // gift sparkles
+  state.endTimer = 0;
+  state.flare = 0;               // breath flare visual
+  state.hintBreath = false;
+  state.hintLowWood = false;
+  updateWoodBtn();
+}
+
+/* ===== CAPTIONS ===== */
+const captionEl = document.getElementById('caption');
+let captionTimer = null;
+
+function caption(text, dur) {
+  captionEl.textContent = text;
+  captionEl.classList.add('visible');
+  clearTimeout(captionTimer);
+  captionTimer = setTimeout(() => captionEl.classList.remove('visible'), (dur || 4) * 1000);
+}
+
+/* ===== NIGHT PHASES ===== */
+// progress 0..1 → how cold the world is (peaks past the middle)
+function coldFactor(p) {
+  const curve = Math.sin(Math.max(0, Math.min(1, (p - 0.15) / 0.7)) * Math.PI);
+  return 1 + curve * 0.55;
+}
+
+const PHASE_CAPTIONS = [
+  { at: 0.02, text: 'dusk settles over the clearing' },
+  { at: 0.3, text: 'the deep night' },
+  { at: 0.52, text: 'the coldest hour approaches' },
+  { at: 0.86, text: 'hold on — dawn is close' }
+];
+let phaseCaptionIndex = 0;
+
+/* ===== WANDERERS ===== */
+function spawnWanderer() {
+  // Fire brightness decides whether anyone sees it from the dark
+  const chance = state.warmth >= 70 ? 1 : state.warmth >= 45 ? 0.65 : state.warmth >= 25 ? 0.25 : 0;
+  if (Math.random() > chance) return;
+  const takenSlots = state.wanderers.map(w => w.slot);
+  const freeSlots = SIT_SLOTS.map((_, i) => i).filter(i => !takenSlots.includes(i));
+  if (freeSlots.length === 0) return;
+
+  const slot = freeSlots[Math.floor(Math.random() * freeSlots.length)];
+  const side = SIT_SLOTS[slot] < 0 ? -1 : 1;
+  state.wanderers.push({
+    slot,
+    x: side * (window.innerWidth * 0.55 + 60), // off in the dark
+    state: 'approaching',
+    progress: 0,       // how warmed they are, 0..1
+    coldTimer: 0,      // how long the fire has been too low for them
+    scarf: ['#a05050', '#5878a0', '#78a068', '#a08850', '#8868a0'][Math.floor(Math.random() * 5)],
+    bob: Math.random() * Math.PI * 2
+  });
+  sfxArrival();
+  if (state.warmed === 0 && state.wanderers.length === 1) {
+    caption('someone comes in from the dark', 4.5);
+  }
+}
+
+function updateWanderers(dt) {
+  for (let i = state.wanderers.length - 1; i >= 0; i--) {
+    const w = state.wanderers[i];
+    const targetX = SIT_SLOTS[w.slot];
+
+    if (w.state === 'approaching') {
+      w.x += (targetX - w.x) * Math.min(1, dt * 0.9);
+      if (Math.abs(w.x - targetX) < 6) {
+        w.x = targetX;
+        w.state = 'sitting';
+      }
+    } else if (w.state === 'sitting') {
+      if (state.warmth >= 35) {
+        w.progress += dt / 22;   // ~22 seconds by a decent fire
+        w.coldTimer = 0;
+        if (w.progress >= 1) {
+          w.state = 'leaving';
+          giveGift(w);
+        }
+      } else {
+        w.coldTimer += dt;
+        w.progress = Math.max(0, w.progress - dt / 40);
+        if (w.coldTimer > 9) {
+          w.state = 'leaving-cold';
+          caption('the fire was too low — they move on', 4);
+        }
+      }
+    } else {
+      // leaving (warm or cold): walk back into the dark
+      const dir = targetX < 0 ? -1 : 1;
+      w.x += dir * dt * 60;
+      if (Math.abs(w.x) > window.innerWidth * 0.55 + 80) {
+        state.wanderers.splice(i, 1);
+      }
+    }
+  }
+}
+
+function giveGift(w) {
+  state.warmed++;
+  if (state.wood < 8 && Math.random() < 0.7) {
+    state.wood++;
+    updateWoodBtn();
+    caption('warmed through, they leave a branch from their pack', 4.5);
+  } else {
+    state.warmth = Math.min(100, state.warmth + 5);
+    caption('they leave a story — the fire likes stories', 4.5);
+  }
+  sfxGift();
+  // celebratory sparkles above the fire
+  for (let i = 0; i < 14 * PARTICLE_SCALE + 2; i++) {
+    state.sparkles.push({
+      x: (Math.random() - 0.5) * 60,
+      y: -60 - Math.random() * 30,
+      vx: (Math.random() - 0.5) * 30,
+      vy: -20 - Math.random() * 40,
+      life: 1
+    });
+  }
+}
+
+/* ===== ACTIONS ===== */
+function feedLog() {
+  if (state.phase !== 'playing' || state.wood <= 0) return;
+  state.wood--;
+  state.warmth = Math.min(100, state.warmth + LOG_WARMTH);
+  state.flare = Math.min(1, state.flare + 0.5);
+  sfxLog();
+  updateWoodBtn();
+  if (state.wood === 2 && !state.hintLowWood) {
+    state.hintLowWood = true;
+    caption('the pile runs low — warm strangers are generous', 5);
+  }
+}
+
+function breathe() {
+  if (state.phase !== 'playing' || state.breathCd > 0) return;
+  state.breathCd = BREATH_COOLDOWN;
+  // Breath fans what's already burning — you can't breathe flames out of
+  // dead coals. This also makes breath-spam strictly weaker than decay.
+  const effect = BREATH_WARMTH * (0.3 + (state.warmth / 100) * 0.9);
+  state.warmth = Math.min(100, state.warmth + effect);
+  state.flare = Math.min(1, state.flare + 0.8);
+  sfxBreath();
+}
+
+function updateWoodBtn() {
+  const btn = document.getElementById('wood-btn');
+  document.getElementById('wood-count').textContent = state.wood;
+  btn.classList.toggle('empty', state.wood <= 0);
+}
+
+/* ===== UPDATE ===== */
+function update(dt) {
+  if (state.phase === 'ended') return;
+
+  if (state.phase === 'dying' || state.phase === 'dawn') {
+    state.endTimer += dt;
+    state.flare = Math.max(0, state.flare - dt);
+    if (state.phase === 'dying') state.warmth = Math.max(0, state.warmth - dt * 10);
+    updateParticles(dt);
+    updateWanderers(dt);
+    if (state.endTimer > 3.2) endNight(state.phase === 'dawn');
+    return;
+  }
+
+  state.t += dt;
+  const p = state.t / NIGHT_LENGTH;
+
+  // Phase captions
+  if (phaseCaptionIndex < PHASE_CAPTIONS.length && p >= PHASE_CAPTIONS[phaseCaptionIndex].at) {
+    caption(PHASE_CAPTIONS[phaseCaptionIndex].text, 4.5);
+    phaseCaptionIndex++;
+  }
+
+  // Cold snaps: warn, then bite
+  state.nextSnap -= dt;
+  if (!state.snap && state.nextSnap <= 0 && p < 0.9) {
+    state.snap = { warn: 4, active: 0 };
+    caption('the wind rises…', 4);
+  }
+  let snapMult = 1;
+  if (state.snap) {
+    if (state.snap.warn > 0) {
+      state.snap.warn -= dt;
+      if (state.snap.warn <= 0) state.snap.active = 11;
+    } else {
+      state.snap.active -= dt;
+      snapMult = 2.1;
+      if (state.snap.active <= 0) {
+        state.snap = null;
+        state.nextSnap = 55 + Math.random() * 30;
+      }
+    }
+  }
+  if (windGain) {
+    const target = (state.snap && state.snap.active > 0) ? 0.10 : (coldFactor(p) - 1) * 0.05;
+    windGain.gain.value += (target - windGain.gain.value) * Math.min(1, dt * 2);
+  }
+
+  // The fire burns itself: bigger fire burns faster, cold makes everything worse
+  const decay = (0.28 + (state.warmth / 100) * 0.5) * coldFactor(p) * snapMult;
+  state.warmth = Math.max(0, state.warmth - decay * dt);
+
+  // Breath cooldown + gentle first-time hint
+  state.breathCd = Math.max(0, state.breathCd - dt);
+  if (!state.hintBreath && state.t > 24 && state.warmth < 55) {
+    state.hintBreath = true;
+    caption('tap the flames to breathe on the embers', 5);
+  }
+
+  // Wanderers
+  state.nextWanderer -= dt;
+  if (state.nextWanderer <= 0 && p < 0.92) {
+    spawnWanderer();
+    state.nextWanderer = 26 + Math.random() * 18;
+  }
+  updateWanderers(dt);
+
+  // Fire crackle sfx, denser when the fire is tall
+  if (actx && Math.random() < dt * (1 + state.warmth / 18)) sfxCrackle();
+
+  state.flare = Math.max(0, state.flare - dt * 1.4);
+  updateParticles(dt);
+
+  // Endings
+  if (state.warmth <= 0) {
+    state.phase = 'dying';
+    state.endTimer = 0;
+    sfxDeath();
+    caption('the fire has gone out', 4);
+  } else if (state.t >= NIGHT_LENGTH) {
+    state.phase = 'dawn';
+    state.endTimer = 0;
+    sfxDawn();
+    caption('dawn', 4);
+  }
+}
+
+function updateParticles(dt) {
+  // Ember particles rise from the fire
+  const rate = (state.warmth / 100) * 60 * PARTICLE_SCALE;
+  if (state.phase === 'playing' || state.phase === 'dawn') {
+    let n = rate * dt;
+    while (n > 0) {
+      if (n < 1 && Math.random() > n) break;
+      state.embers.push({
+        x: (Math.random() - 0.5) * (18 + state.warmth * 0.3),
+        y: 0,
+        vx: (Math.random() - 0.5) * 14,
+        vy: -(30 + Math.random() * 50 + state.warmth * 0.6),
+        life: 0.7 + Math.random() * 0.7,
+        size: 1.5 + Math.random() * 2.5
+      });
+      n -= 1;
+    }
+  }
+  for (let i = state.embers.length - 1; i >= 0; i--) {
+    const e = state.embers[i];
+    e.x += e.vx * dt;
+    e.y += e.vy * dt;
+    e.vx += (Math.random() - 0.5) * 40 * dt;
+    e.life -= dt;
+    if (e.life <= 0) state.embers.splice(i, 1);
+  }
+
+  // Wind streaks during cold snaps
+  if (state.snap && state.snap.active > 0 && Math.random() < dt * 40 * PARTICLE_SCALE) {
+    state.windParticles.push({
+      x: -window.innerWidth / 2 - 20,
+      y: -Math.random() * window.innerHeight * 0.8,
+      vx: 300 + Math.random() * 250,
+      life: 3
+    });
+  }
+  for (let i = state.windParticles.length - 1; i >= 0; i--) {
+    const wp = state.windParticles[i];
+    wp.x += wp.vx * dt;
+    wp.life -= dt;
+    if (wp.life <= 0 || wp.x > window.innerWidth / 2 + 40) state.windParticles.splice(i, 1);
+  }
+
+  // Gift sparkles
+  for (let i = state.sparkles.length - 1; i >= 0; i--) {
+    const s = state.sparkles[i];
+    s.x += s.vx * dt;
+    s.y += s.vy * dt;
+    s.life -= dt * 0.8;
+    if (s.life <= 0) state.sparkles.splice(i, 1);
+  }
+}
+
+/* ===== ENDINGS ===== */
+function endNight(survived) {
+  state.phase = 'ended';
+  save.nights++;
+  if (survived) save.kept++;
+  save.totalWarmed += state.warmed;
+  if (state.warmed > save.bestWarmed) save.bestWarmed = state.warmed;
+  persist();
+
+  let title, sub;
+  if (survived) {
+    if (state.warmed >= 5) { title = 'HEARTHKEEPER'; sub = 'five souls carry your fire into the world'; }
+    else if (state.warmed >= 3) { title = 'TENDER OF THE FLAME'; sub = 'the night was long — you were longer'; }
+    else if (state.warmed >= 1) { title = 'A LIGHT IN THE DARK'; sub = 'someone out there remembers this fire'; }
+    else { title = 'A QUIET NIGHT'; sub = 'the fire kept only you · that was enough'; }
+  } else {
+    title = 'THE LONG DARK';
+    sub = state.warmed > 0
+      ? 'the embers sleep · but ' + state.warmed + (state.warmed === 1 ? ' soul' : ' souls') + ' left here warm'
+      : 'the embers sleep · dawn comes anyway';
+  }
+
+  document.getElementById('end-title').textContent = title;
+  document.getElementById('end-sub').textContent = sub;
+  document.getElementById('end-tally').innerHTML =
+    '<span class="big">' + state.warmed + '</span> ' + (state.warmed === 1 ? 'soul' : 'souls') + ' warmed<br>' +
+    (survived ? state.wood + ' log' + (state.wood === 1 ? '' : 's') + ' to spare' : 'the fire went out with ' + Math.round(state.t / NIGHT_LENGTH * 100) + '% of the night gone');
+  document.getElementById('end-lifetime').innerHTML = lifetimeLine();
+  document.getElementById('end-overlay').classList.add('visible');
+}
+
+function lifetimeLine() {
+  if (save.nights === 0) return '';
+  return 'nights kept: ' + save.kept + ' of ' + save.nights +
+    ' &middot; souls warmed: ' + save.totalWarmed +
+    ' &middot; best night: ' + save.bestWarmed;
+}
+
+/* ===== RENDERING ===== */
+const canvas = document.getElementById('scene');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+
+function resize() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * DPR;
+  canvas.height = H * DPR;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Static starfield (regenerated on resize is fine — kept simple)
+let stars = [];
+function makeStars() {
+  stars = [];
+  for (let i = 0; i < 90; i++) {
+    stars.push({ x: Math.random(), y: Math.random() * 0.55, tw: Math.random() * Math.PI * 2, r: 0.4 + Math.random() * 1.1 });
+  }
+}
+makeStars();
+
+function skyColors(p, dying) {
+  // p: 0..1 night progress. Returns [top, bottom]
+  if (dying) return [[10, 10, 14], [18, 16, 18]];
+  if (p < 0.15) { // dusk
+    const t = p / 0.15;
+    return [lerp3([38, 22, 40], [12, 12, 24], t), lerp3([80, 40, 38], [24, 20, 26], t)];
+  }
+  if (p < 0.85) return [[12, 12, 24], [24, 20, 26]];
+  const t = (p - 0.85) / 0.15; // approach of dawn
+  return [lerp3([12, 12, 24], [40, 32, 44], t), lerp3([24, 20, 26], [120, 70, 50], t)];
+}
+
+function lerp3(a, b, t) {
+  t = Math.max(0, Math.min(1, t));
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+}
+
+function rgb(c) { return 'rgb(' + Math.round(c[0]) + ',' + Math.round(c[1]) + ',' + Math.round(c[2]) + ')'; }
+
+function draw(now) {
+  const p = Math.min(1, state.t / NIGHT_LENGTH);
+  const dying = state.phase === 'dying' || (state.phase === 'ended' && state.warmth <= 0);
+  const dawnGlow = state.phase === 'dawn' ? Math.min(1, state.endTimer / 3) : 0;
+
+  // Sky
+  const [top, bottom] = skyColors(p + dawnGlow * 0.15, dying);
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, rgb(top));
+  sky.addColorStop(1, rgb(bottom));
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars (fade near dusk start and dawn)
+  const starAlpha = Math.max(0, Math.min(1, (p - 0.05) / 0.1)) * (1 - Math.max(0, (p - 0.85) / 0.15)) * (dying ? 0.6 : 1);
+  if (starAlpha > 0.01) {
+    for (const s of stars) {
+      const tw = reducedMotion ? 0.75 : 0.55 + 0.45 * Math.sin(now / 900 + s.tw);
+      ctx.fillStyle = 'rgba(220, 225, 235, ' + (starAlpha * tw * 0.7).toFixed(3) + ')';
+      ctx.beginPath();
+      ctx.arc(s.x * W, s.y * H, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Moon arcs across the night
+  if (!dying) {
+    const mx = W * (0.12 + p * 0.76);
+    const my = H * (0.32 - Math.sin(p * Math.PI) * 0.16);
+    ctx.fillStyle = 'rgba(225, 228, 235, 0.8)';
+    ctx.beginPath();
+    ctx.arc(mx, my, 14, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgb(top);
+    ctx.beginPath();
+    ctx.arc(mx - 6, my - 4, 12, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Ground: snowfield
+  const groundY = H * 0.72;
+  const ground = ctx.createLinearGradient(0, groundY, 0, H);
+  const gTint = dying ? 20 : 30 + (state.warmth / 100) * 10;
+  ground.addColorStop(0, 'rgb(' + Math.round(gTint + 8) + ',' + Math.round(gTint + 8) + ',' + Math.round(gTint + 14) + ')');
+  ground.addColorStop(1, 'rgb(' + Math.round(gTint - 6) + ',' + Math.round(gTint - 6) + ',' + Math.round(gTint) + ')');
+  ctx.fillStyle = ground;
+  ctx.fillRect(0, groundY, W, H - groundY);
+
+  // Treeline silhouettes
+  ctx.fillStyle = 'rgba(8, 8, 12, 0.75)';
+  for (let i = 0; i < 14; i++) {
+    const tx = (i / 14) * W + (i % 3) * 12;
+    const th = 40 + ((i * 37) % 50);
+    ctx.beginPath();
+    ctx.moveTo(tx - 14, groundY);
+    ctx.lineTo(tx, groundY - th);
+    ctx.lineTo(tx + 14, groundY);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // === The fire (screen center of the clearing) ===
+  const fx = W / 2;
+  const fy = groundY + (H - groundY) * 0.35;
+  const w01 = state.warmth / 100;
+  const flare = state.flare;
+
+  // Warm glow on the snow
+  const glowR = Math.max(10, 60 + w01 * 240 + flare * 60);
+  const glow = ctx.createRadialGradient(fx, fy, 4, fx, fy, glowR);
+  glow.addColorStop(0, 'rgba(232, 160, 80, ' + (0.28 + w01 * 0.3).toFixed(3) + ')');
+  glow.addColorStop(0.5, 'rgba(200, 110, 50, ' + (0.10 + w01 * 0.12).toFixed(3) + ')');
+  glow.addColorStop(1, 'rgba(150, 70, 30, 0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(fx - glowR, fy - glowR, glowR * 2, glowR * 2);
+
+  // Log stack
+  ctx.save();
+  ctx.translate(fx, fy);
+  ctx.fillStyle = '#241a12';
+  ctx.strokeStyle = '#3a2c1c';
+  ctx.lineWidth = 1;
+  roundRectFill(-26, -3, 52, 9, 4, -0.18);
+  roundRectFill(-24, -6, 48, 9, 4, 0.15);
+
+  // Flame body: layered flickering ellipses
+  if (state.warmth > 0.5) {
+    const fh = Math.max(6, 14 + w01 * 90 + flare * 26);   // flame height
+    const fw = Math.max(4, 10 + w01 * 26 + flare * 8);     // flame width
+    const flick = reducedMotion ? 0 : Math.sin(now / 90) * 2.4 + Math.sin(now / 53) * 1.6;
+    drawFlame(0, -4, fw, fh + flick, 'rgba(220, 110, 40, 0.85)');
+    drawFlame(0, -4, fw * 0.65, (fh + flick) * 0.7, 'rgba(240, 170, 70, 0.9)');
+    drawFlame(0, -4, fw * 0.35, (fh + flick) * 0.45, 'rgba(250, 225, 150, 0.95)');
+  }
+
+  // Ember particles
+  for (const e of state.embers) {
+    const a = Math.max(0, Math.min(1, e.life));
+    ctx.fillStyle = 'rgba(' + (232 - a * 30) + ',' + Math.round(120 + a * 70) + ',60,' + (a * 0.9).toFixed(3) + ')';
+    ctx.beginPath();
+    ctx.arc(e.x, e.y - 8 + e.vy * 0.01, e.size * a, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Gift sparkles
+  for (const s of state.sparkles) {
+    ctx.fillStyle = 'rgba(240, 220, 150, ' + Math.max(0, s.life).toFixed(3) + ')';
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Wanderers
+  for (const w of state.wanderers) {
+    drawWanderer(w, now);
+  }
+  ctx.restore();
+
+  // Wind streaks
+  if (state.windParticles.length) {
+    ctx.strokeStyle = 'rgba(180, 200, 220, 0.25)';
+    ctx.lineWidth = 1;
+    for (const wp of state.windParticles) {
+      ctx.beginPath();
+      ctx.moveTo(fx + wp.x, fy + wp.y);
+      ctx.lineTo(fx + wp.x - 30, fy + wp.y + 3);
+      ctx.stroke();
+    }
+  }
+
+  // Frost vignette during cold snap warning + bite
+  if (state.snap) {
+    const bite = state.snap.active > 0 ? Math.min(1, state.snap.active / 3) : 0.4;
+    const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.32, W / 2, H / 2, Math.max(W, H) * 0.7);
+    vg.addColorStop(0, 'rgba(120, 160, 200, 0)');
+    vg.addColorStop(1, 'rgba(120, 160, 200, ' + (bite * 0.16).toFixed(3) + ')');
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // Dawn wash
+  if (dawnGlow > 0) {
+    ctx.fillStyle = 'rgba(240, 180, 110, ' + (dawnGlow * 0.16).toFixed(3) + ')';
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+
+function roundRectFill(x, y, w, h, r, rot) {
+  ctx.save();
+  ctx.rotate(rot);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawFlame(cx, baseY, w, h, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(cx - w, baseY);
+  ctx.quadraticCurveTo(cx - w * 0.6, baseY - h * 0.55, cx, baseY - h);
+  ctx.quadraticCurveTo(cx + w * 0.6, baseY - h * 0.55, cx + w, baseY);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawWanderer(w, now) {
+  const bobY = reducedMotion ? 0 : Math.sin(now / 700 + w.bob) * 1.5;
+  const sitting = w.state === 'sitting';
+  const bodyH = sitting ? 26 : 34;
+  const y = -bodyH + bobY;
+
+  ctx.save();
+  ctx.translate(w.x, 2);
+
+  // warmth tint: cold blue-grey → warm brown as they warm through
+  const t = w.progress;
+  const body = lerp3([52, 56, 68], [96, 72, 52], t);
+  ctx.fillStyle = rgb(body);
+
+  // body capsule
+  ctx.beginPath();
+  ctx.moveTo(-9, 0);
+  ctx.lineTo(-9, y + 10);
+  ctx.quadraticCurveTo(-9, y, 0, y);
+  ctx.quadraticCurveTo(9, y, 9, y + 10);
+  ctx.lineTo(9, 0);
+  ctx.closePath();
+  ctx.fill();
+
+  // head
+  const head = lerp3([70, 72, 82], [140, 110, 86], t);
+  ctx.fillStyle = rgb(head);
+  ctx.beginPath();
+  ctx.arc(0, y - 6, 6.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // scarf
+  ctx.fillStyle = w.scarf;
+  ctx.fillRect(-7, y - 1, 14, 4);
+
+  // warming steam once they're mostly warm
+  if (t > 0.55 && !reducedMotion) {
+    ctx.strokeStyle = 'rgba(220, 220, 220, ' + ((t - 0.55) * 0.5).toFixed(3) + ')';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    const sx = Math.sin(now / 400 + w.bob) * 3;
+    ctx.moveTo(sx, y - 16);
+    ctx.quadraticCurveTo(sx + 3, y - 22, sx, y - 28);
+    ctx.stroke();
+  }
+
+  // progress tick above head while sitting
+  if (sitting) {
+    ctx.fillStyle = 'rgba(196, 184, 165, 0.25)';
+    ctx.fillRect(-10, y - 24, 20, 2);
+    ctx.fillStyle = 'rgba(232, 160, 80, 0.85)';
+    ctx.fillRect(-10, y - 24, 20 * Math.min(1, w.progress), 2);
+  }
+
+  ctx.restore();
+}
+
+/* ===== INPUT ===== */
+canvas.addEventListener('pointerdown', (e) => {
+  if (state.phase !== 'playing') return;
+  // Tap near the fire = breathe
+  const fx = W / 2;
+  const fy = H * 0.72 + (H - H * 0.72) * 0.35;
+  const dx = e.clientX - fx;
+  const dy = e.clientY - fy;
+  if (dx * dx + dy * dy < 130 * 130) breathe();
+});
+
+document.getElementById('wood-btn').addEventListener('click', feedLog);
+document.getElementById('mute-btn').addEventListener('click', () => setMuted(!save.muted));
+document.getElementById('start-btn').addEventListener('click', startNight);
+document.getElementById('again-btn').addEventListener('click', startNight);
+
+document.addEventListener('keydown', (e) => {
+  if (e.repeat) return;
+  const titleVisible = document.getElementById('title-overlay').classList.contains('visible');
+  const endVisible = document.getElementById('end-overlay').classList.contains('visible');
+
+  if (titleVisible && (e.key === 'Enter' || e.key === ' ')) {
+    e.preventDefault();
+    startNight();
+    return;
+  }
+  if (endVisible && (e.key === 'r' || e.key === 'R' || e.key === 'Enter')) {
+    e.preventDefault();
+    startNight();
+    return;
+  }
+  if (state.phase !== 'playing') return;
+
+  if (e.key === ' ' || e.key === 'f' || e.key === 'F') {
+    e.preventDefault();
+    feedLog();
+  } else if (e.key === 'b' || e.key === 'B') {
+    e.preventDefault();
+    breathe();
+  } else if (e.key === 'm' || e.key === 'M') {
+    setMuted(!save.muted);
+  }
+});
+
+/* ===== FLOW ===== */
+function startNight() {
+  initAudioOnce();
+  if (actx && actx.state === 'suspended') actx.resume();
+  document.getElementById('title-overlay').classList.remove('visible');
+  document.getElementById('end-overlay').classList.remove('visible');
+  document.getElementById('hud').classList.add('visible');
+  phaseCaptionIndex = 0;
+  resetNight();
+}
+
+/* ===== MAIN LOOP (delta time, pauses when tab is hidden) ===== */
+let lastTime = performance.now();
+let hidden = false;
+
+document.addEventListener('visibilitychange', () => {
+  hidden = document.hidden;
+  if (!hidden) lastTime = performance.now(); // don't let the fire die while you're gone
+});
+
+function loop(now) {
+  const dt = Math.min(0.05, (now - lastTime) / 1000);
+  lastTime = now;
+  if (!hidden && state.phase) {
+    update(dt);
+    draw(now);
+  } else if (!hidden) {
+    draw(now); // title screen: still show the scene
+  }
+  requestAnimationFrame(loop);
+}
+
+/* ===== BOOT ===== */
+// Show lifetime stats on the title if this isn't the first visit
+(function () {
+  const line = lifetimeLine();
+  if (line) document.getElementById('title-lifetime').innerHTML = line;
+  document.getElementById('mute-btn').textContent = save.muted ? 'sound off' : 'sound on';
+  // Pre-title scene: a quiet ember, so the canvas isn't empty behind the overlay
+  state.phase = null;
+  state.t = 0;
+  state.warmth = 22;
+  state.wood = START_WOOD;
+  state.wanderers = [];
+  state.embers = [];
+  state.windParticles = [];
+  state.sparkles = [];
+  state.snap = null;
+  state.flare = 0;
+  state.endTimer = 0;
+  requestAnimationFrame((n) => { lastTime = n; requestAnimationFrame(loop); });
+})();
+</script>
+</body>
+</html>

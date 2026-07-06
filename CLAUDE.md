@@ -88,10 +88,12 @@ Turn resolution sequence:
 ## Coherence Game — Key Mechanics
 
 ### Core Loop
-- 16x16 grid, player starts with coherence = 20
-- Must collect ≥1 artifact and reach exit to win
-- Pushing for more artifacts = higher quality but greater collapse risk
+- 16x16 grid, player starts with coherence = 30
+- Must collect ≥1 artifact and reach exit to win; the exit is a *choice* (transmit now vs go back for more)
+- Pushing for more artifacts = higher ending tier but greater collapse risk — endings are tiered by `artifactsCollected` (1-4) × coherence band (high 12+ / medium 6-11 / low 1-5), text lives in `ENDINGS` (from docs/coh-end-tier-messages.md)
+- Artifact coherence bonuses have diminishing returns (−3 per artifact already collected) so depth costs instead of paying
 - Coherence ≤ 0 = game over
+- Balance verified by bot simulation: safe ≈99% survival, 2 artifacts ≈58%, all 4 ≈29%
 
 ### Artifacts (6 total, data-driven)
 Each has a name, effect string, and coherence bonus. Effects modify game behavior:
@@ -104,7 +106,7 @@ Each has a name, effect string, and coherence bonus. Effects modify game behavio
 - Activates after player crosses threshold
 - Spreads to cells with <2 distortion neighbors (preserves playable paths)
 - Rate modified by certain artifacts
-- Triggers every 3 turns
+- Escalates with overstay (`turnsBelow`): every 3 turns at first, every 2 after 24 turns below, double spread after 48
 
 ### Threshold Crossing
 - Irreversible state change at grid midpoint

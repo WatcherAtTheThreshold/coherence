@@ -610,13 +610,16 @@ button:active,
             <div id="grid"></div>
             <div id="status">
                 <div class="status-line">
-                    COH: <span id="coh-value" class="coh-value coh-high">20</span>
+                    COH: <span id="coh-value" class="coh-value coh-high">30</span>
                 </div>
                 <div class="status-line">
                     STATE: <span id="state-value" class="state-stable">STABLE</span>
                 </div>
                 <div class="status-line">
                     CARRY: <span id="carry-value">NONE</span>
+                </div>
+                <div class="status-line">
+                    RECOVERED: <span id="found-value">0/4</span>
                 </div>
             </div>
         </div>
@@ -629,7 +632,7 @@ button:active,
         </div>
         
         <div class="instructions">
-            ARROW KEYS OR WASD TO MOVE • FIND ARTIFACT TO UNLOCK EXIT • ESCAPE BEFORE DISSOLUTION
+            ARROW KEYS OR WASD TO MOVE • ARTIFACTS UNLOCK THE EXIT • EACH ONE RAISES THE TRANSMISSION • ESCAPE BEFORE DISSOLUTION
         </div>
     </div>
     
@@ -787,7 +790,7 @@ button:active,
         const gameState = {
             grid: [],
             playerPos: { x: 1, y: 1 },
-            coherence: 20,
+            coherence: 30,
             belowThreshold: false,
             turnCounter: 0,
             carriedArtifact: null,
@@ -795,7 +798,9 @@ button:active,
             won: false,
             anchorUsed: false,
             thresholdRow: 5,
-            hasArtifact: false // New: track if player has collected an artifact
+            hasArtifact: false, // at least one artifact collected (unlocks exit)
+            artifactsCollected: 0, // total recovered this run — drives ending tiers
+            turnsBelow: 0 // turns since crossing the threshold — spreading escalates
         };
         
         // Artifact definitions
@@ -991,6 +996,9 @@ button:active,
             
             // Update carried item
             carryValue.textContent = gameState.carriedArtifact ? gameState.carriedArtifact.name : 'NONE';
+
+            // Update artifacts recovered
+            document.getElementById('found-value').textContent = gameState.artifactsCollected + '/4';
         }
         
         // Handle movement
@@ -1052,7 +1060,7 @@ button:active,
                     showMessage('EXIT LOCKED', 'ARTIFACT REQUIRED TO UNLOCK TRANSMISSION', false);
                     return;
                 }
-                winGame();
+                showExitPrompt();
                 return;
             }
             
@@ -1089,9 +1097,14 @@ button:active,
             // Distortion adjacency/standing check
             checkDistortionDrain();
             
-            // Post-threshold spreading
-            if (gameState.belowThreshold && gameState.turnCounter % 3 === 0) {
-                spreadDistortions();
+            // Post-threshold spreading — escalates the longer you've pushed:
+            // every 3 turns at first, every 2 after ~8 bars of overstaying
+            if (gameState.belowThreshold) {
+                gameState.turnsBelow++;
+                const interval = gameState.turnsBelow > 24 ? 2 : 3;
+                if (gameState.turnCounter % interval === 0) {
+                    spreadDistortions();
+                }
             }
             
             // Coherence check
@@ -1191,6 +1204,11 @@ button:active,
             // Get spread rate based on artifacts
             let spreadCount = 1; // Default: one spread per cycle
 
+            // Deep overstay: the world frays faster the longer you push
+            if (gameState.turnsBelow > 48) {
+                spreadCount++;
+            }
+
             // Harmonic Beacon: distortions spread faster (2 per cycle)
             if (gameState.carriedArtifact && gameState.carriedArtifact.effect === 'beacon') {
                 spreadCount = 2;
@@ -1267,10 +1285,16 @@ button:active,
             const text = document.getElementById('modal-text');
             const buttons = document.getElementById('modal-buttons');
 
+            // The relief of each artifact fades — depth must cost, not pay
+            const prospectiveBonus = Math.max(0, artifact.cohBonus - 3 * gameState.artifactsCollected);
+            const fadeNote = prospectiveBonus < artifact.cohBonus
+                ? '<br><em>the relief fades with each one</em>'
+                : '';
+
             title.textContent = `ARTIFACT: ${artifact.name}`;
             text.innerHTML = `
                 ${artifact.description}<br><br>
-                <strong>IMMEDIATE: +${artifact.cohBonus} COHERENCE</strong>
+                <strong>IMMEDIATE: +${prospectiveBonus} COHERENCE</strong>${fadeNote}
             `;
 
             let buttonHTML = '';
@@ -1305,7 +1329,9 @@ button:active,
 
             gameState.carriedArtifact = artifact;
             gameState.hasArtifact = true; // Mark that player has collected an artifact
-            gameState.coherence += artifact.cohBonus;
+            const bonus = Math.max(0, artifact.cohBonus - 3 * gameState.artifactsCollected);
+            gameState.artifactsCollected++;
+            gameState.coherence += bonus;
             gameState.grid[gameState.playerPos.y][gameState.playerPos.x] = '.';
 
             playSound('artifact');
@@ -1319,7 +1345,9 @@ button:active,
         function tradeArtifact(index) {
             const newArtifact = artifacts[index];
             gameState.carriedArtifact = newArtifact;
-            gameState.coherence += newArtifact.cohBonus;
+            const bonus = Math.max(0, newArtifact.cohBonus - 3 * gameState.artifactsCollected);
+            gameState.artifactsCollected++;
+            gameState.coherence += bonus;
             gameState.grid[gameState.playerPos.y][gameState.playerPos.x] = '.';
 
             playSound('artifact');
@@ -1342,29 +1370,83 @@ button:active,
             const titleEl = document.getElementById('modal-title');
             const text = document.getElementById('modal-text');
             const buttons = document.getElementById('modal-buttons');
-            
+
             titleEl.textContent = title;
-            text.textContent = message;
-            
+            text.innerHTML = message;
+
             if (isGameEnd) {
-                buttons.innerHTML = '<button onclick="location.reload()" id="modal-primary-btn">RESET SIGNAL</button>';
+                buttons.innerHTML = '<button onclick="resetGame()" id="modal-primary-btn">RESET SIGNAL</button>';
             } else {
                 buttons.innerHTML = '<button onclick="closeMessage()" id="modal-primary-btn">CONTINUE</button>';
             }
-            
+
             modal.classList.add('active');
-            
+
             // Focus button
             setTimeout(() => {
                 document.getElementById('modal-primary-btn').focus();
             }, 100);
         }
-        
+
         // Close message
         function closeMessage() {
             document.getElementById('modal').classList.remove('active');
         }
-        
+
+        // The exit is a choice, not a wall — the whole game in one prompt
+        function showExitPrompt() {
+            const modal = document.getElementById('modal');
+            const titleEl = document.getElementById('modal-title');
+            const text = document.getElementById('modal-text');
+            const buttons = document.getElementById('modal-buttons');
+
+            titleEl.textContent = 'THE WAY OUT';
+            text.innerHTML =
+                'ARTIFACTS RECOVERED: ' + gameState.artifactsCollected + '/4<br>' +
+                'COHERENCE REMAINING: ' + Math.max(0, gameState.coherence) + '<br><br>' +
+                '<em>Transmit what you have, or go back for more?</em>';
+
+            buttons.innerHTML =
+                '<button onclick="winGame()" id="modal-primary-btn">TRANSMIT</button>' +
+                '<button class="secondary" onclick="stayLonger()">GO BACK</button>';
+
+            modal.classList.add('active');
+            setTimeout(() => {
+                document.getElementById('modal-primary-btn').focus();
+            }, 100);
+        }
+
+        function stayLonger() {
+            closeMessage();
+            renderGrid();
+            updateStatus();
+        }
+
+        // Ending tiers — artifacts recovered (quality of work) crossed with
+        // coherence remaining (cost to self). Text from docs/coh-end-tier-messages.md
+        const ENDINGS = {
+            1: {
+                high:   'You delivered what was needed.<br>You knew when to stop.<br>Sometimes that\'s the hardest part.',
+                medium: 'You delivered what was needed.<br>It cost something, but you got out.<br>Good enough is good enough.',
+                low:    'You delivered what was needed.<br>Barely.<br>You\'re going to need time to recover.'
+            },
+            2: {
+                high:   'You pushed for quality and maintained yourself.<br>This is the balance.<br>This is how it should feel.',
+                medium: 'You pushed for quality and made it work.<br>It cost you, but you\'re still whole.<br>Worth it.',
+                low:    'You pushed for quality.<br>You got it.<br>But you\'re running on fumes.'
+            },
+            3: {
+                high:   'You got everything and kept yourself intact.<br>How did you do that?<br>Whatever you\'re doing, keep doing it.',
+                medium: 'You got everything you wanted.<br>It took everything you had.<br>Was it worth what it cost?',
+                low:    'You got everything.<br>You gave everything.<br>Next time, maybe leave something for yourself.'
+            },
+            4: {
+                high:   'You went back for more than was asked.<br>You stayed whole through all of it.<br>Either you\'re very good at this, or very lucky.<br>Don\'t assume it was luck.',
+                medium: 'You went back for more than was asked.<br>You found them all.<br>The cost was real, but you\'re still standing.<br>Just barely.',
+                low:    'You went back for more than was asked.<br>You found them all.<br>There\'s almost nothing left of you.<br>Was proving something worth this?'
+            }
+        };
+
         // Win game
         function winGame() {
             gameState.gameOver = true;
@@ -1372,14 +1454,14 @@ button:active,
 
             playSound('exit');
 
-            let message = '';
-            if (gameState.coherence >= 15) {
-                message = 'YOU EMERGED WHOLE • SIGNAL PRESERVED';
-            } else if (gameState.coherence >= 8) {
-                message = 'YOU MADE IT OUT, BARELY • FRAGMENTS REMAIN';
-            } else {
-                message = 'YOU ESCAPED WITH FRAGMENTS • BARELY COHERENT';
-            }
+            const tier = Math.max(1, Math.min(4, gameState.artifactsCollected));
+            const coh = Math.max(0, gameState.coherence);
+            const band = coh >= 12 ? 'high' : coh >= 6 ? 'medium' : 'low';
+
+            const message =
+                'ARTIFACTS RECOVERED: ' + gameState.artifactsCollected + '<br>' +
+                'COHERENCE REMAINING: ' + coh + '<br><br>' +
+                '<em>' + ENDINGS[tier][band] + '</em>';
 
             showMessage('TRANSMISSION COMPLETE', message, true);
         }
@@ -1388,7 +1470,37 @@ button:active,
         function loseGame() {
             gameState.gameOver = true;
             playSound('death');
-            showMessage('SIGNAL LOST', 'DISSOLUTION • COHERENCE COLLAPSED', true);
+            const n = gameState.artifactsCollected;
+            const detail = n > 0
+                ? 'DISSOLUTION • ' + n + (n === 1 ? ' ARTIFACT' : ' ARTIFACTS') + ' LOST TO THE NOISE'
+                : 'DISSOLUTION • COHERENCE COLLAPSED';
+            showMessage('SIGNAL LOST', detail, true);
+        }
+
+        // In-place restart — no page reload, no second audio-init click
+        function resetGame() {
+            gameState.coherence = 30;
+            gameState.belowThreshold = false;
+            gameState.turnCounter = 0;
+            gameState.carriedArtifact = null;
+            gameState.gameOver = false;
+            gameState.won = false;
+            gameState.anchorUsed = false;
+            gameState.hasArtifact = false;
+            gameState.artifactsCollected = 0;
+            gameState.turnsBelow = 0;
+            gameState.playerPos = { x: 1, y: 1 };
+
+            // Return to the main track for the fresh run
+            if (audioInitialized) {
+                audioThreshold.pause();
+                audioThreshold.currentTime = 0;
+                audioMain.currentTime = 0;
+                audioMain.play().catch(() => {});
+            }
+
+            closeMessage();
+            initGame();
         }
         
         // Keyboard controls
