@@ -773,6 +773,48 @@
             }
         }
     
+        /* The dusk woods live behind the cards */
+        #woods {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            z-index: 0;
+        }
+
+        #mute-btn {
+            position: fixed;
+            top: 14px;
+            right: 16px;
+            z-index: 20;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.72rem;
+            letter-spacing: 0.1rem;
+            color: rgba(196, 184, 165, 0.6);
+            background: rgba(10, 10, 15, 0.4);
+            border: 1px solid rgba(212, 165, 116, 0.3);
+            border-radius: 999px;
+            padding: 5px 12px;
+            cursor: pointer;
+            transition: color 0.25s ease, border-color 0.25s ease;
+        }
+        #mute-btn:hover { color: var(--text-bright); border-color: rgba(212, 165, 116, 0.6); }
+
+        .lifetime {
+            font-size: 0.62rem;
+            letter-spacing: 0.1rem;
+            color: var(--text-dim);
+            min-height: 1em;
+            margin-bottom: 1.4rem;
+            margin-top: -1.2rem;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .story-card, .start-card, .end-card { transition-duration: 0.2s; }
+            .begin-text, .control-btn.tell-story.ready { animation: none; }
+        }
+
         /* Back to the collection */
         .hub-link {
             position: fixed;
@@ -790,13 +832,16 @@
     </style>
 </head>
 <body>
+    <canvas id="woods"></canvas>
     <a class="hub-link" href="index.html">&larr; the hub</a>
+    <button id="mute-btn" aria-label="toggle sound">sound on</button>
     <!-- Start Overlay (Card Style) -->
     <div id="start-overlay">
         <div class="start-card" id="start-card" onclick="flipStartCard()">
             <div class="start-card-face start-card-front">
                 <h2>Journey</h2>
-                <p>a story unfolds</p>
+                <p>the evening walk</p>
+                <div class="lifetime" id="title-lifetime"></div>
                 <span class="begin-text">tap to begin</span>
             </div>
             <div class="start-card-face start-card-back">
@@ -804,11 +849,11 @@
                     <div class="mini-wizard-grid" id="mini-wizard-grid"></div>
                 </div>
                 <p class="welcome-text">
-                    "Hello, traveler.<br>
-                    I am here to witness<br>
-                    the story you will tell."
+                    "Shall we walk?<br>
+                    The woods have stories<br>
+                    tonight."
                 </p>
-                <button class="continue-btn" onclick="startGame(event)">enter</button>
+                <button class="continue-btn" onclick="startGame(event)">set out</button>
             </div>
         </div>
     </div>
@@ -835,7 +880,7 @@
     <div class="container">
         <header>
             <h1>Journey</h1>
-            <div class="subtitle">build a story, one card at a time</div>
+            <div class="subtitle">the evening walk · a story gathered one card at a time</div>
         </header>
 
         <!-- Wizard Display -->
@@ -1126,6 +1171,174 @@
         let endLeds = [];
         let audioContext = null;
 
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        // ============================================
+        // PERSISTENCE — the woods remember your walks
+        // ============================================
+        const SAVE_KEY = 'journey-save';
+
+        function loadSave() {
+            try {
+                const raw = localStorage.getItem(SAVE_KEY);
+                if (raw) return Object.assign(defaultSave(), JSON.parse(raw));
+            } catch (e) { /* private mode — walk without memory */ }
+            return defaultSave();
+        }
+        function defaultSave() { return { walks: 0, cards: 0, muted: false, voice: true }; }
+        function persist() {
+            try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
+        }
+        const save = loadSave();
+        let muted = save.muted;
+
+        function setMuted(m) {
+            muted = m;
+            save.muted = m;
+            persist();
+            music.muted = m;
+            if (m && window.speechSynthesis) window.speechSynthesis.cancel();
+            document.getElementById('mute-btn').textContent = m ? 'sound off' : 'sound on';
+        }
+
+        // ============================================
+        // THE DUSK WOODS — golden hour fades as the story grows
+        // ============================================
+        const woods = document.getElementById('woods');
+        const wctx = woods.getContext('2d');
+        let wW = 0, wH = 0, duskT = 0, woodsLast = 0;
+        let treeBands = [], fireflies = [];
+
+        function resizeWoods() {
+            wW = window.innerWidth;
+            wH = window.innerHeight;
+            woods.width = wW;
+            woods.height = wH;
+            makeTrees();
+        }
+
+        function makeTrees() {
+            treeBands = [];
+            const bands = [
+                { h: 0.16, alpha: 0.5, spacing: 60 },  // far
+                { h: 0.26, alpha: 0.72, spacing: 90 }, // mid
+                { h: 0.40, alpha: 0.92, spacing: 140 } // near
+            ];
+            for (const b of bands) {
+                const trees = [];
+                for (let x = -40; x < wW + 80; x += b.spacing) {
+                    trees.push({
+                        x: x + (Math.random() - 0.5) * b.spacing * 0.5,
+                        h: wH * b.h * (0.75 + Math.random() * 0.5),
+                        w: 14 + Math.random() * 16
+                    });
+                }
+                treeBands.push({ ...b, trees });
+            }
+            fireflies = [];
+            for (let i = 0; i < 16; i++) {
+                fireflies.push({
+                    x: Math.random() * wW,
+                    y: wH * (0.55 + Math.random() * 0.4),
+                    ph: Math.random() * Math.PI * 2,
+                    sp: 0.5 + Math.random()
+                });
+            }
+        }
+
+        function lerpC(a, b, t) {
+            return [
+                Math.round(a[0] + (b[0] - a[0]) * t),
+                Math.round(a[1] + (b[1] - a[1]) * t),
+                Math.round(a[2] + (b[2] - a[2]) * t)
+            ];
+        }
+        const rgbStr = (c) => 'rgb(' + c.join(',') + ')';
+
+        function woodsLoop(ts) {
+            if (typeof ts !== 'number') ts = woodsLast;
+            const dt = Math.max(0, Math.min(50, ts - woodsLast));
+            woodsLast = ts;
+            const frames = dt / 16.67;
+
+            // Light follows the story: 0 = golden hour, 1 = deep dusk
+            const target = Math.min(1, game.story.length / 12);
+            duskT += (target - duskT) * (1 - Math.pow(0.995, frames));
+
+            // Sky
+            const top = lerpC([64, 52, 88], [11, 12, 28], duskT);
+            const bottom = lerpC([198, 126, 82], [42, 34, 58], duskT);
+            const sky = wctx.createLinearGradient(0, 0, 0, wH);
+            sky.addColorStop(0, rgbStr(top));
+            sky.addColorStop(0.82, rgbStr(bottom));
+            sky.addColorStop(1, rgbStr(lerpC([54, 44, 40], [16, 14, 24], duskT)));
+            wctx.fillStyle = sky;
+            wctx.fillRect(0, 0, wW, wH);
+
+            // Low sun, swallowed by the dusk
+            const sunA = Math.max(0, 0.55 - duskT * 0.7);
+            if (sunA > 0.01) {
+                const sx = wW * 0.24, sy = wH * 0.72;
+                const glow = wctx.createRadialGradient(sx, sy, 4, sx, sy, wW * 0.2);
+                glow.addColorStop(0, 'rgba(240, 190, 120, ' + sunA.toFixed(3) + ')');
+                glow.addColorStop(1, 'rgba(240, 190, 120, 0)');
+                wctx.fillStyle = glow;
+                wctx.fillRect(sx - wW * 0.2, sy - wW * 0.2, wW * 0.4, wW * 0.4);
+            }
+
+            // Ground
+            wctx.fillStyle = rgbStr(lerpC([48, 40, 36], [18, 16, 26], duskT));
+            wctx.fillRect(0, wH * 0.8, wW, wH * 0.2);
+
+            // The path, wandering toward the light
+            wctx.fillStyle = rgbStr(lerpC([84, 66, 52], [30, 26, 38], duskT));
+            wctx.beginPath();
+            wctx.moveTo(wW * 0.42, wH);
+            wctx.quadraticCurveTo(wW * 0.36, wH * 0.88, wW * 0.27, wH * 0.81);
+            wctx.lineTo(wW * 0.31, wH * 0.8);
+            wctx.quadraticCurveTo(wW * 0.44, wH * 0.87, wW * 0.58, wH);
+            wctx.closePath();
+            wctx.fill();
+
+            // Tree bands, far to near
+            const sway = reducedMotion ? 0 : Math.sin(ts / 4000) * 2;
+            for (let bi = 0; bi < treeBands.length; bi++) {
+                const band = treeBands[bi];
+                const shade = lerpC([34, 30, 44], [7, 8, 16], duskT);
+                wctx.fillStyle = 'rgba(' + shade.join(',') + ',' + band.alpha + ')';
+                const baseY = wH * 0.8 + bi * 4;
+                for (const t of band.trees) {
+                    const tx = t.x + sway * (bi + 1) * 0.4;
+                    wctx.beginPath();
+                    wctx.moveTo(tx - t.w, baseY);
+                    wctx.lineTo(tx, baseY - t.h);
+                    wctx.lineTo(tx + t.w, baseY);
+                    wctx.closePath();
+                    wctx.fill();
+                }
+            }
+
+            // Fireflies wake as the light goes
+            const ffA = Math.max(0, (duskT - 0.35) / 0.65);
+            if (ffA > 0.02 && !reducedMotion) {
+                for (const f of fireflies) {
+                    const fx = f.x + Math.sin(ts / 2100 * f.sp + f.ph) * 26;
+                    const fy = f.y + Math.cos(ts / 2900 * f.sp + f.ph) * 16;
+                    const pulse = 0.35 + 0.65 * Math.abs(Math.sin(ts / 1100 * f.sp + f.ph));
+                    wctx.fillStyle = 'rgba(222, 228, 140, ' + (ffA * pulse * 0.8).toFixed(3) + ')';
+                    wctx.beginPath();
+                    wctx.arc(fx, fy, 1.7, 0, Math.PI * 2);
+                    wctx.fill();
+                }
+            }
+
+            requestAnimationFrame(woodsLoop);
+        }
+
+        window.addEventListener('resize', resizeWoods);
+        resizeWoods();
+        requestAnimationFrame(woodsLoop);
+
         function init() {
             // Create main wizard grid
             const wizardGrid = document.getElementById('wizard-grid');
@@ -1165,7 +1378,7 @@
                 card.classList.add('flipped');
                 setMiniWizardMood('pleased');
                 // Initialize TTS
-                if ('speechSynthesis' in window) {
+                if (window.speechSynthesis) {
                     const utterance = new SpeechSynthesisUtterance('');
                     window.speechSynthesis.speak(utterance);
                 }
@@ -1174,6 +1387,10 @@
 
         function startGame(event) {
             event.stopPropagation();
+
+            // Audio context needs this user gesture
+            try { initAudio(); } catch (e) {}
+            setMuted(muted);
 
             // Start music
             music.volume = 0.3;
@@ -1249,7 +1466,43 @@
             return audioContext;
         }
 
+        // Small tactile sounds for handling the cards
+        function playFlip() {
+            if (!audioContext || muted) return;
+            const now = audioContext.currentTime;
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(240, now);
+            osc.frequency.exponentialRampToValueAtTime(180, now + 0.06);
+            gain.gain.setValueAtTime(0.045, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+            osc.start(now);
+            osc.stop(now + 0.1);
+        }
+
+        function playSelect() {
+            if (!audioContext || muted) return;
+            const now = audioContext.currentTime;
+            [330, 440].forEach((f, i) => {
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                osc.type = 'sine';
+                osc.frequency.value = f;
+                const t = now + i * 0.09;
+                gain.gain.setValueAtTime(0.05, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+                osc.start(t);
+                osc.stop(t + 0.4);
+            });
+        }
+
         function playCompletionSound() {
+            if (muted) return;
             try {
                 const ctx = initAudio();
                 const now = ctx.currentTime;
@@ -1333,7 +1586,7 @@
         function wizardSpeak(text) {
             document.getElementById('wizard-text').textContent = text;
 
-            if (game.ttsEnabled && 'speechSynthesis' in window) {
+            if (game.ttsEnabled && !muted && window.speechSynthesis) {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.rate = 0.85;
@@ -1499,8 +1752,10 @@
                     if (!cardEl.classList.contains('flipped')) {
                         // First click - flip to reveal
                         cardEl.classList.add('flipped');
+                        playFlip();
                     } else {
                         // Second click - select
+                        playSelect();
                         selectCard(index);
                     }
                 });
@@ -1676,6 +1931,9 @@
         // ============================================
         function toggleTTS() {
             game.ttsEnabled = !game.ttsEnabled;
+            save.voice = game.ttsEnabled;
+            persist();
+            if (!game.ttsEnabled && window.speechSynthesis) window.speechSynthesis.cancel();
             document.getElementById('tts-toggle').textContent =
                 `voice: ${game.ttsEnabled ? 'on' : 'off'}`;
         }
@@ -1752,6 +2010,11 @@
         // END GAME
         // ============================================
         function endGame() {
+            // The walk is complete — the woods remember it
+            save.walks++;
+            save.cards += game.story.length;
+            persist();
+
             // Clear the cards container
             document.getElementById('cards-container').innerHTML = '';
 
@@ -1812,7 +2075,7 @@
             const storyTextEl = document.getElementById('end-story-text');
 
             // If no TTS, just cycle through visuals
-            if (!game.ttsEnabled || !('speechSynthesis' in window)) {
+            if (!game.ttsEnabled || muted || !window.speechSynthesis) {
                 displayBeatsSequentially(storyParts, storyTextEl, false);
                 return;
             }
@@ -2000,7 +2263,7 @@
             setEndWizardMood('pleased');
 
             // Speak farewell
-            if (game.ttsEnabled && 'speechSynthesis' in window) {
+            if (game.ttsEnabled && !muted && window.speechSynthesis) {
                 setTimeout(() => {
                     const utterance = new SpeechSynthesisUtterance("Thank you for sharing this story with me.");
                     utterance.rate = 0.8;
@@ -2031,7 +2294,7 @@
             const newBtn = document.getElementById('new-story-btn');
 
             // Cancel any ongoing speech
-            if ('speechSynthesis' in window) {
+            if (window.speechSynthesis) {
                 window.speechSynthesis.cancel();
             }
 
@@ -2097,14 +2360,29 @@
         }
 
         // Load voices
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.onvoiceschanged = () => {
+        if (window.speechSynthesis) {
+            if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => {
                 window.speechSynthesis.getVoices();
             };
         }
 
         // Initialize
         init();
+        // The woods remember (boot wiring)
+        game.ttsEnabled = save.voice;
+        document.getElementById('tts-toggle').textContent = 'voice: ' + (save.voice ? 'on' : 'off');
+        document.getElementById('mute-btn').textContent = muted ? 'sound off' : 'sound on';
+        document.getElementById('mute-btn').addEventListener('click', () => setMuted(!muted));
+        document.addEventListener('keydown', (e) => {
+            if ((e.key === 'm' || e.key === 'M') && !e.repeat) setMuted(!muted);
+        });
+        (function () {
+            if (save.walks > 0) {
+                document.getElementById('title-lifetime').textContent =
+                    save.walks + ' walk' + (save.walks === 1 ? '' : 's') + ' taken · ' +
+                    save.cards + ' cards woven';
+            }
+        })();
     </script>
 </body>
 </html>
