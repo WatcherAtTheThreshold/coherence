@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COHERENCE 3D</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap');
+
+:root {
+  --phos: #79bfa1;
+  --phos-dim: rgba(121, 191, 161, 0.55);
+  --amber: #caa86a;
+  --red: #c26a6a;
+  --distortion: #b06a95;
+  --anchor: #7fb6c2;
+  --threshold: #c98b5b;
+  --gold: #d7c07a;
+  --void: #050705;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: 'IBM Plex Mono', monospace;
+  background: var(--void);
+  color: var(--phos);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#view {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: pixelated;
+  touch-action: none;
+}
+
+/* CRT dressing: scanlines + curvature vignette over everything */
+#crt {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+  background:
+    repeating-linear-gradient(0deg,
+      rgba(0, 0, 0, 0.22) 0px, rgba(0, 0, 0, 0.22) 1px,
+      transparent 1px, transparent 3px),
+    radial-gradient(ellipse at center,
+      transparent 55%, rgba(0, 0, 0, 0.42) 100%);
+  mix-blend-mode: multiply;
+}
+
+/* ===== Corner chrome ===== */
+.hub-link {
+  position: fixed;
+  top: 12px;
+  left: 16px;
+  z-index: 50;
+  color: var(--phos-dim);
+  text-decoration: none;
+  font-size: 0.72rem;
+  letter-spacing: 0.14rem;
+  text-shadow: 0 0 6px rgba(121, 191, 161, 0.4);
+  transition: color 0.25s ease;
+}
+.hub-link:hover { color: var(--phos); }
+
+#mute-btn {
+  position: fixed;
+  top: 10px;
+  right: 14px;
+  z-index: 50;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.1rem;
+  color: var(--phos-dim);
+  background: rgba(5, 10, 7, 0.5);
+  border: 1px solid rgba(121, 191, 161, 0.3);
+  border-radius: 2px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: color 0.25s ease, border-color 0.25s ease;
+}
+#mute-btn:hover { color: var(--phos); border-color: var(--phos-dim); }
+
+/* ===== HUD (phosphor terminal) ===== */
+#hud {
+  position: fixed;
+  left: 16px;
+  bottom: 14px;
+  z-index: 30;
+  display: none;
+  font-size: 0.78rem;
+  letter-spacing: 0.12rem;
+  text-shadow: 0 0 8px rgba(121, 191, 161, 0.5);
+  line-height: 1.7;
+}
+#hud.visible { display: block; }
+
+#coh-bar {
+  width: 170px;
+  height: 7px;
+  border: 1px solid rgba(121, 191, 161, 0.4);
+  margin: 3px 0 5px;
+  padding: 1px;
+}
+#coh-fill {
+  height: 100%;
+  width: 100%;
+  background: var(--phos);
+  box-shadow: 0 0 8px rgba(121, 191, 161, 0.6);
+  transition: width 0.25s ease, background 0.3s ease;
+}
+#coh-fill.medium { background: var(--amber); box-shadow: 0 0 8px rgba(202, 168, 106, 0.6); }
+#coh-fill.low { background: var(--red); box-shadow: 0 0 8px rgba(194, 106, 106, 0.6); }
+
+#carry-line { color: var(--gold); font-size: 0.68rem; min-height: 1.1em; }
+#effect-line { color: var(--phos-dim); font-size: 0.62rem; font-style: italic; min-height: 1.1em; }
+
+#status-right {
+  position: fixed;
+  right: 16px;
+  bottom: 14px;
+  z-index: 30;
+  display: none;
+  text-align: right;
+  font-size: 0.72rem;
+  letter-spacing: 0.12rem;
+  text-shadow: 0 0 8px rgba(121, 191, 161, 0.5);
+  line-height: 1.7;
+}
+#status-right.visible { display: block; }
+#compass-line { color: var(--anchor); min-height: 1.1em; font-size: 0.68rem; }
+
+/* Caption: events speak here */
+#caption {
+  position: fixed;
+  bottom: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  max-width: 90vw;
+  text-align: center;
+  font-size: 0.8rem;
+  letter-spacing: 0.12rem;
+  color: var(--phos);
+  text-shadow: 0 0 10px rgba(121, 191, 161, 0.6);
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+  text-transform: uppercase;
+}
+#caption.visible { opacity: 1; }
+
+/* Damage / event flashes */
+#flash {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+#flash.hit { background: rgba(176, 106, 149, 0.25); opacity: 1; transition: none; }
+#flash.warm { background: rgba(127, 182, 194, 0.2); opacity: 1; transition: none; }
+#flash.cross { background: rgba(201, 139, 91, 0.3); opacity: 1; transition: none; }
+
+.instructions {
+  position: fixed;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: none;
+  font-size: 0.62rem;
+  letter-spacing: 0.1rem;
+  color: var(--phos-dim);
+  text-shadow: 0 0 6px rgba(121, 191, 161, 0.3);
+}
+.instructions.visible { display: block; }
+
+/* ===== Modal (terminal window) ===== */
+#modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  background: rgba(3, 5, 4, 0.75);
+  padding: 1rem;
+}
+#modal.active { display: flex; }
+
+.modal-content {
+  width: min(92vw, 480px);
+  padding: 1.5rem 1.4rem;
+  background: rgba(5, 12, 8, 0.92);
+  border: 1px solid rgba(121, 191, 161, 0.5);
+  box-shadow: 0 0 30px rgba(121, 191, 161, 0.15), inset 0 0 40px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+
+.modal-title {
+  font-size: 0.95rem;
+  letter-spacing: 0.2rem;
+  color: var(--phos);
+  margin-bottom: 0.8rem;
+  text-shadow: 0 0 10px rgba(121, 191, 161, 0.6);
+}
+
+.modal-text {
+  color: var(--phos-dim);
+  font-size: 0.78rem;
+  line-height: 1.8;
+  letter-spacing: 0.05rem;
+  margin-bottom: 1.1rem;
+}
+.modal-text em { color: var(--phos); font-style: normal; }
+
+.modal-buttons { display: flex; gap: 0.7rem; justify-content: center; flex-wrap: wrap; }
+
+.modal-buttons button {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.15rem;
+  padding: 0.5rem 1.2rem;
+  background: transparent;
+  border: 1px solid rgba(121, 191, 161, 0.5);
+  color: var(--phos);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.modal-buttons button:hover, .modal-buttons button:focus {
+  background: rgba(121, 191, 161, 0.15);
+  box-shadow: 0 0 12px rgba(121, 191, 161, 0.3);
+  outline: none;
+}
+
+/* ===== Boot overlay ===== */
+#boot {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 70;
+  background: var(--void);
+  transition: opacity 0.8s ease;
+}
+#boot.hidden { opacity: 0; pointer-events: none; }
+
+.boot-content {
+  text-align: center;
+  padding: 2rem;
+}
+
+.boot-content h1 {
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 600;
+  font-size: clamp(1.6rem, 5vw, 2.6rem);
+  letter-spacing: 0.5rem;
+  color: var(--phos);
+  text-shadow: 0 0 18px rgba(121, 191, 161, 0.7);
+  margin-bottom: 0.4rem;
+}
+
+.boot-content .tag {
+  font-size: 0.7rem;
+  letter-spacing: 0.3rem;
+  color: var(--phos-dim);
+  margin-bottom: 1.6rem;
+}
+
+.boot-content .lifetime {
+  font-size: 0.65rem;
+  letter-spacing: 0.12rem;
+  color: var(--phos-dim);
+  margin-bottom: 1.4rem;
+  min-height: 1em;
+}
+
+.boot-content button {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.85rem;
+  letter-spacing: 0.2rem;
+  padding: 0.7rem 2.2rem;
+  background: transparent;
+  border: 1px solid var(--phos);
+  color: var(--phos);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  animation: bootPulse 2.4s ease-in-out infinite;
+}
+.boot-content button:hover {
+  background: rgba(121, 191, 161, 0.15);
+  box-shadow: 0 0 20px rgba(121, 191, 161, 0.4);
+}
+
+@keyframes bootPulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(121, 191, 161, 0.2); }
+  50% { box-shadow: 0 0 16px rgba(121, 191, 161, 0.45); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boot-content button { animation: none; }
+}
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="crt"></div>
+
+<a class="hub-link" href="index.html">&larr; the hub</a>
+<button id="mute-btn" aria-label="toggle sound">sound on</button>
+
+<div id="hud">
+  <div>COH <span id="coh-value">30</span></div>
+  <div id="coh-bar"><div id="coh-fill"></div></div>
+  <div id="carry-line">CARRY: NONE</div>
+  <div id="effect-line"></div>
+</div>
+
+<div id="status-right">
+  <div>RECOVERED <span id="found-value">0/4</span></div>
+  <div id="compass-line"></div>
+</div>
+
+<div id="caption"></div>
+<div id="flash"></div>
+
+<div class="instructions" id="instructions">
+  W FORWARD · S BACK · A/D TURN · Q/E SIDESTEP · EVERY STEP COSTS
+</div>
+
+<div id="modal">
+  <div class="modal-content">
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-text" id="modal-text"></div>
+    <div class="modal-buttons" id="modal-buttons"></div>
+  </div>
+</div>
+
+<div id="boot">
+  <div class="boot-content">
+    <h1>COHERENCE 3D</h1>
+    <div class="tag">SIGNAL DECAY PROTOCOL &middot; FIRST PERSON</div>
+    <div class="lifetime" id="boot-lifetime"></div>
+    <button id="boot-btn" autofocus>INSERT DISK</button>
+  </div>
+</div>
+
+<audio id="music-main" loop><source src="music/coherence.mp3" type="audio/mpeg"></audio>
+<audio id="music-threshold" loop><source src="music/coherence-threshold.mp3" type="audio/mpeg"></audio>
+
+<script>
+'use strict';
+
+/* ============================================================
+   COHERENCE 3D — the same rules, a new camera.
+   Grid-stepped first person (crawler movement) over the exact
+   rule set of coherence.html, rendered as a phosphor raycaster
+   at 320x200 under CRT scanlines.
+   ============================================================ */
+
+/* ===== CONSTANTS ===== */
+const GRID = 16;
+const RW = 320, RH = 200;          // internal render resolution
+const FOV_PLANE = 0.66;            // ~66 degrees
+const FOG_BASE = 5.5;              // tiles until full dark
+const START_COH = 30;
+
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ===== PERSISTENCE ===== */
+const SAVE_KEY = 'coherence-3d-save';
+
+function loadSave() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (raw) return Object.assign(defaultSave(), JSON.parse(raw));
+  } catch (e) { /* play without memory */ }
+  return defaultSave();
+}
+function defaultSave() { return { runs: 0, transmissions: 0, bestArtifacts: 0, muted: false }; }
+function persist() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
+}
+const save = loadSave();
+let muted = save.muted;
+
+const audioMain = document.getElementById('music-main');
+const audioThreshold = document.getElementById('music-threshold');
+
+function setMuted(m) {
+  muted = m;
+  save.muted = m;
+  persist();
+  audioMain.muted = m;
+  audioThreshold.muted = m;
+  document.getElementById('mute-btn').textContent = m ? 'sound off' : 'sound on';
+}
+
+/* ===== AUDIO (ported tones + spread crackle) ===== */
+let actx = null;
+
+function playSound(type) {
+  if (!actx || muted) return;
+  const now = actx.currentTime;
+  const osc = actx.createOscillator();
+  const gain = actx.createGain();
+  osc.connect(gain);
+  gain.connect(actx.destination);
+
+  switch (type) {
+    case 'move':
+      osc.frequency.setValueAtTime(180 + Math.random() * 40, now);
+      osc.frequency.exponentialRampToValueAtTime(95, now + 0.05);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.06);
+      osc.start(now); osc.stop(now + 0.07);
+      break;
+    case 'turn':
+      osc.frequency.setValueAtTime(140, now);
+      gain.gain.setValueAtTime(0.03, now);
+      gain.gain.exponentialRampToValueAtTime(0.005, now + 0.04);
+      osc.start(now); osc.stop(now + 0.05);
+      break;
+    case 'artifact':
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(400, now);
+      osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+      osc.frequency.exponentialRampToValueAtTime(1200, now + 0.2);
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+      osc.start(now); osc.stop(now + 0.3);
+      break;
+    case 'anchor':
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.setValueAtTime(400, now + 0.05);
+      osc.frequency.setValueAtTime(500, now + 0.1);
+      gain.gain.setValueAtTime(0.14, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+      osc.start(now); osc.stop(now + 0.2);
+      break;
+    case 'distortion':
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(150, now);
+      osc.frequency.exponentialRampToValueAtTime(80, now + 0.15);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+      osc.start(now); osc.stop(now + 0.16);
+      break;
+    case 'threshold':
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(100, now);
+      osc.frequency.exponentialRampToValueAtTime(60, now + 0.4);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+      osc.start(now); osc.stop(now + 0.45);
+      break;
+    case 'collision':
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(90, now);
+      gain.gain.setValueAtTime(0.13, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+      osc.start(now); osc.stop(now + 0.09);
+      break;
+    case 'spread':
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(60 + Math.random() * 40, now);
+      gain.gain.setValueAtTime(0.05, now);
+      gain.gain.exponentialRampToValueAtTime(0.005, now + 0.2);
+      osc.start(now); osc.stop(now + 0.22);
+      break;
+    case 'exit':
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(500, now);
+      osc.frequency.setValueAtTime(600, now + 0.1);
+      osc.frequency.setValueAtTime(800, now + 0.2);
+      osc.frequency.setValueAtTime(1000, now + 0.3);
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+      osc.start(now); osc.stop(now + 0.55);
+      break;
+    case 'death':
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.exponentialRampToValueAtTime(45, now + 0.7);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.7);
+      osc.start(now); osc.stop(now + 0.75);
+      break;
+  }
+}
+
+function switchToThresholdMusic() {
+  audioMain.pause();
+  audioThreshold.play().catch(() => {});
+}
+
+/* ===== ARTIFACTS (identical to coherence.html) ===== */
+const artifacts = [
+  { name: 'RESONANCE INVERTER', description: 'Distortions become Anchors. Anchors become Distortions.', cohBonus: 6, effect: 'invert' },
+  { name: 'CLARITY LENS', description: 'See the pattern, pay the price. +1 drain per turn.', cohBonus: 6, effect: 'clarity' },
+  { name: 'SEVERANCE', description: 'Immune to distortion adjacency. Anchors no longer function.', cohBonus: 6, effect: 'sever' },
+  { name: 'TEMPORAL ECHO', description: 'Every 5th move is free. Time bends around you.', cohBonus: 8, effect: 'echo' },
+  { name: 'VOID COMPASS', description: 'Distortions spread slower. Coherence drain reduced by 1.', cohBonus: 5, effect: 'compass' },
+  { name: 'HARMONIC BEACON', description: 'Anchors restore +15 instead of +10. Attracts distortion faster.', cohBonus: 4, effect: 'beacon' }
+];
+
+/* ===== ENDINGS (identical to coherence.html / the design docs) ===== */
+const ENDINGS = {
+  1: {
+    high: 'You delivered what was needed.<br>You knew when to stop.<br>Sometimes that\'s the hardest part.',
+    medium: 'You delivered what was needed.<br>It cost something, but you got out.<br>Good enough is good enough.',
+    low: 'You delivered what was needed.<br>Barely.<br>You\'re going to need time to recover.'
+  },
+  2: {
+    high: 'You pushed for quality and maintained yourself.<br>This is the balance.<br>This is how it should feel.',
+    medium: 'You pushed for quality and made it work.<br>It cost you, but you\'re still whole.<br>Worth it.',
+    low: 'You pushed for quality.<br>You got it.<br>But you\'re running on fumes.'
+  },
+  3: {
+    high: 'You got everything and kept yourself intact.<br>How did you do that?<br>Whatever you\'re doing, keep doing it.',
+    medium: 'You got everything you wanted.<br>It took everything you had.<br>Was it worth what it cost?',
+    low: 'You got everything.<br>You gave everything.<br>Next time, maybe leave something for yourself.'
+  },
+  4: {
+    high: 'You went back for more than was asked.<br>You stayed whole through all of it.<br>Either you\'re very good at this, or very lucky.<br>Don\'t assume it was luck.',
+    medium: 'You went back for more than was asked.<br>You found them all.<br>The cost was real, but you\'re still standing.<br>Just barely.',
+    low: 'You went back for more than was asked.<br>You found them all.<br>There\'s almost nothing left of you.<br>Was proving something worth this?'
+  }
+};
+
+/* ===== GAME STATE ===== */
+const gameState = {
+  grid: [],
+  playerPos: { x: 1, y: 1 },
+  dir: 1, // 0 N, 1 E, 2 S, 3 W
+  coherence: START_COH,
+  belowThreshold: false,
+  turnCounter: 0,
+  carriedArtifact: null,
+  gameOver: false,
+  won: false,
+  thresholdRow: 8,
+  hasArtifact: false,
+  artifactsCollected: 0,
+  turnsBelow: 0,
+  started: false
+};
+
+const DIRS = [
+  { x: 0, y: -1 }, // N
+  { x: 1, y: 0 },  // E
+  { x: 0, y: 1 },  // S
+  { x: -1, y: 0 }  // W
+];
+
+/* ===== LEVEL GENERATION =====
+   Same recipe as coherence.html, plus sparse interior walls so
+   first person has corridors and corners — connectivity verified. */
+function generateLevel() {
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const grid = [];
+    for (let y = 0; y < GRID; y++) {
+      grid[y] = [];
+      for (let x = 0; x < GRID; x++) {
+        grid[y][x] = (y === 0 || y === GRID - 1 || x === 0 || x === GRID - 1) ? '#' : '.';
+      }
+    }
+
+    // Sparse interior walls: short segments, never on the threshold row
+    const thresholdRow = 8;
+    const segments = 7 + Math.floor(Math.random() * 4);
+    for (let s = 0; s < segments; s++) {
+      const horiz = Math.random() < 0.5;
+      const len = 2 + Math.floor(Math.random() * 3);
+      const sx = 2 + Math.floor(Math.random() * (GRID - 4 - (horiz ? len : 0)));
+      const sy = 2 + Math.floor(Math.random() * (GRID - 4 - (horiz ? 0 : len)));
+      for (let i = 0; i < len; i++) {
+        const wx = sx + (horiz ? i : 0);
+        const wy = sy + (horiz ? 0 : i);
+        if (wy === thresholdRow || (wx === 1 && wy === 1) || (wx === GRID - 2 && wy === 1)) continue;
+        grid[wy][wx] = '#';
+      }
+    }
+
+    // Threshold across row 8 (floor tiles only)
+    gameState.thresholdRow = thresholdRow;
+    for (let x = 1; x < GRID - 1; x++) {
+      if (grid[thresholdRow][x] === '.') grid[thresholdRow][x] = '+';
+    }
+
+    // Exit top-right
+    grid[1][GRID - 2] = 'X';
+
+    // Feature placement helper on open floor
+    const placeOn = (cond) => {
+      for (let tries = 0; tries < 80; tries++) {
+        const x = 2 + Math.floor(Math.random() * (GRID - 4));
+        const y = 2 + Math.floor(Math.random() * (GRID - 4));
+        if (grid[y][x] === '.' && cond(x, y)) return { x, y };
+      }
+      return null;
+    };
+
+    // 1 artifact above threshold, 3 below
+    const above = placeOn((x, y) => y < thresholdRow);
+    if (!above) continue;
+    grid[above.y][above.x] = '*';
+    let ok = true;
+    for (let i = 0; i < 3; i++) {
+      const p = placeOn((x, y) => y > thresholdRow);
+      if (!p) { ok = false; break; }
+      grid[p.y][p.x] = '*';
+    }
+    if (!ok) continue;
+
+    // 2-3 anchors below
+    const anchorCount = 2 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < anchorCount; i++) {
+      const p = placeOn((x, y) => y > thresholdRow);
+      if (p) grid[p.y][p.x] = 'O';
+    }
+
+    // 4-6 initial distortions anywhere (not threshold row)
+    const distortionCount = 4 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < distortionCount; i++) {
+      const p = placeOn((x, y) => y !== thresholdRow);
+      if (p) grid[p.y][p.x] = '~';
+    }
+
+    // Connectivity: everything must be reachable from the start
+    const reach = new Set();
+    const queue = [[1, 1]];
+    reach.add('1,1');
+    while (queue.length) {
+      const [cx, cy] = queue.pop();
+      for (const d of DIRS) {
+        const nx = cx + d.x, ny = cy + d.y;
+        const key = nx + ',' + ny;
+        if (nx < 0 || ny < 0 || nx >= GRID || ny >= GRID) continue;
+        if (grid[ny][nx] === '#' || reach.has(key)) continue;
+        reach.add(key);
+        queue.push([nx, ny]);
+      }
+    }
+    let allReachable = true;
+    for (let y = 1; y < GRID - 1; y++) {
+      for (let x = 1; x < GRID - 1; x++) {
+        if (grid[y][x] !== '#' && !reach.has(x + ',' + y)) { allReachable = false; }
+      }
+    }
+    if (allReachable) return grid;
+  }
+  // Fallback: open arena (original layout, always connected)
+  const grid = [];
+  for (let y = 0; y < GRID; y++) {
+    grid[y] = [];
+    for (let x = 0; x < GRID; x++) {
+      grid[y][x] = (y === 0 || y === GRID - 1 || x === 0 || x === GRID - 1) ? '#' : '.';
+    }
+  }
+  for (let x = 1; x < GRID - 1; x++) grid[8][x] = '+';
+  grid[1][GRID - 2] = 'X';
+  grid[4][4] = '*'; grid[11][4] = '*'; grid[12][10] = '*'; grid[10][13] = '*';
+  grid[12][6] = 'O'; grid[11][12] = 'O';
+  grid[5][10] = '~'; grid[10][7] = '~'; grid[13][3] = '~'; grid[6][3] = '~';
+  return grid;
+}
+
+/* ===== CAMERA (eased between grid poses) ===== */
+const cam = { x: 1.5, y: 1.5, ang: 0 };
+
+function targetAngle() { return gameState.dir * Math.PI / 2 - Math.PI / 2; } // dir 0 (N) = -90deg
+
+function snapCamera() {
+  cam.x = gameState.playerPos.x + 0.5;
+  cam.y = gameState.playerPos.y + 0.5;
+  cam.ang = targetAngle();
+}
+
+/* ===== RULES (ported from coherence.html) ===== */
+function tileAt(x, y) {
+  if (x < 0 || y < 0 || x >= GRID || y >= GRID) return '#';
+  return gameState.grid[y][x];
+}
+
+function turnPlayer(delta) {
+  if (gameState.gameOver || modalActive()) return;
+  gameState.dir = (gameState.dir + delta + 4) % 4;
+  playSound('turn');
+}
+
+function stepPlayer(move) {
+  // move: 1 forward, -1 back, 2 strafe-left, 3 strafe-right
+  if (gameState.gameOver || modalActive()) return;
+  let d;
+  if (move === 1) d = DIRS[gameState.dir];
+  else if (move === -1) d = { x: -DIRS[gameState.dir].x, y: -DIRS[gameState.dir].y };
+  else if (move === 2) d = DIRS[(gameState.dir + 3) % 4];
+  else d = DIRS[(gameState.dir + 1) % 4];
+
+  const nx = gameState.playerPos.x + d.x;
+  const ny = gameState.playerPos.y + d.y;
+
+  if (tileAt(nx, ny) === '#') {
+    playSound('collision');
+    flash('hit');
+    return;
+  }
+
+  gameState.playerPos.x = nx;
+  gameState.playerPos.y = ny;
+  playSound('move');
+  processTurn();
+}
+
+function processTurn() {
+  gameState.turnCounter++;
+
+  let cohCost = 1;
+  if (gameState.carriedArtifact && gameState.carriedArtifact.effect === 'clarity') cohCost += 1;
+  if (gameState.carriedArtifact && gameState.carriedArtifact.effect === 'echo' &&
+      gameState.turnCounter % 5 === 0) cohCost = 0;
+
+  gameState.coherence -= cohCost;
+
+  const px = gameState.playerPos.x, py = gameState.playerPos.y;
+  const currentTile = tileAt(px, py);
+
+  if (currentTile === 'X') {
+    if (!gameState.hasArtifact) {
+      showMessage('EXIT LOCKED', 'ARTIFACT REQUIRED TO UNLOCK TRANSMISSION', false);
+      updateHUD();
+      return;
+    }
+    showExitPrompt();
+    updateHUD();
+    return;
+  }
+
+  if (currentTile === 'O') {
+    if (!gameState.carriedArtifact || gameState.carriedArtifact.effect !== 'sever') {
+      const invert = gameState.carriedArtifact && gameState.carriedArtifact.effect === 'invert';
+      if (!invert) {
+        const anchorBonus = (gameState.carriedArtifact && gameState.carriedArtifact.effect === 'beacon') ? 15 : 10;
+        gameState.coherence += anchorBonus;
+        gameState.grid[py][px] = '.';
+        playSound('anchor');
+        flash('warm');
+        caption('ANCHOR +' + anchorBonus);
+      }
+    }
+  }
+
+  if (currentTile === '*') {
+    handleArtifactPickup();
+    updateHUD();
+    return;
+  }
+
+  if (currentTile === '+' && !gameState.belowThreshold) {
+    gameState.belowThreshold = true;
+    playSound('threshold');
+    switchToThresholdMusic();
+    flash('cross');
+    caption('THRESHOLD CROSSED · IT SPREADS NOW');
+  }
+
+  checkDistortionDrain();
+
+  if (gameState.belowThreshold) {
+    gameState.turnsBelow++;
+    const interval = gameState.turnsBelow > 24 ? 2 : 3;
+    if (gameState.turnCounter % interval === 0) {
+      spreadDistortions();
+    }
+  }
+
+  if (gameState.coherence <= 0) {
+    loseGame();
+    return;
+  }
+
+  updateHUD();
+}
+
+function checkDistortionDrain() {
+  const px = gameState.playerPos.x, py = gameState.playerPos.y;
+  const currentTile = tileAt(px, py);
+
+  if (gameState.carriedArtifact && gameState.carriedArtifact.effect === 'sever') return;
+
+  const invert = gameState.carriedArtifact && gameState.carriedArtifact.effect === 'invert';
+  const hasCompass = gameState.carriedArtifact && gameState.carriedArtifact.effect === 'compass';
+
+  if (currentTile === '~') {
+    let drain = 2;
+    if (hasCompass && !invert) drain = 1;
+    if (!invert) {
+      gameState.coherence -= drain;
+      playSound('distortion');
+      flash('hit');
+      caption('DISTORTION -' + drain);
+    } else {
+      gameState.coherence += 2;
+      caption('INVERTED +2');
+    }
+    return;
+  }
+
+  for (const d of DIRS) {
+    if (tileAt(px + d.x, py + d.y) === '~') {
+      let drain = 1;
+      if (hasCompass && !invert) drain = 0;
+      if (!invert) {
+        gameState.coherence -= drain;
+        if (drain > 0) caption('PROXIMITY -' + drain);
+      } else {
+        gameState.coherence += 1;
+      }
+      return;
+    }
+  }
+}
+
+function countDistortedNeighbors(x, y) {
+  let count = 0;
+  for (const d of DIRS) {
+    if (tileAt(x + d.x, y + d.y) === '~') count++;
+  }
+  return count;
+}
+
+function spreadDistortions() {
+  let spreadCount = 1;
+  if (gameState.turnsBelow > 48) spreadCount++;
+  if (gameState.carriedArtifact && gameState.carriedArtifact.effect === 'beacon') spreadCount = 2;
+  if (gameState.carriedArtifact && gameState.carriedArtifact.effect === 'compass') {
+    if (gameState.turnCounter % 6 !== 0) return;
+  }
+
+  const candidates = [];
+  for (let y = 0; y < GRID; y++) {
+    for (let x = 0; x < GRID; x++) {
+      if (gameState.grid[y][x] !== '~') continue;
+      for (const d of DIRS) {
+        const nx = x + d.x, ny = y + d.y;
+        if (tileAt(nx, ny) === '.' && countDistortedNeighbors(nx, ny) < 2) {
+          candidates.push({ x: nx, y: ny });
+        }
+      }
+    }
+  }
+
+  for (let i = 0; i < spreadCount && candidates.length > 0; i++) {
+    const idx = Math.floor(Math.random() * candidates.length);
+    const chosen = candidates[idx];
+    gameState.grid[chosen.y][chosen.x] = '~';
+    candidates.splice(idx, 1);
+    playSound('spread');
+  }
+}
+
+/* ===== ARTIFACT MODALS (ported) ===== */
+function modalActive() {
+  return document.getElementById('modal').classList.contains('active');
+}
+
+function handleArtifactPickup() {
+  const artifact = artifacts[Math.floor(Math.random() * artifacts.length)];
+  const modal = document.getElementById('modal');
+  const title = document.getElementById('modal-title');
+  const text = document.getElementById('modal-text');
+  const buttons = document.getElementById('modal-buttons');
+
+  const prospectiveBonus = Math.max(0, artifact.cohBonus - 3 * gameState.artifactsCollected);
+  const fadeNote = prospectiveBonus < artifact.cohBonus
+    ? '<br><em>the relief fades with each one</em>' : '';
+
+  title.textContent = 'ARTIFACT: ' + artifact.name;
+  text.innerHTML = artifact.description + '<br><br><em>IMMEDIATE: +' + prospectiveBonus + ' COHERENCE</em>' + fadeNote;
+
+  const idx = artifacts.indexOf(artifact);
+  if (gameState.carriedArtifact) {
+    buttons.innerHTML =
+      '<button onclick="tradeArtifact(' + idx + ')" id="modal-primary-btn">TRADE</button>' +
+      '<button onclick="declineArtifact()">DECLINE</button>';
+  } else {
+    buttons.innerHTML =
+      '<button onclick="acceptArtifact(' + idx + ')" id="modal-primary-btn">ACCEPT</button>' +
+      '<button onclick="declineArtifact()">DECLINE</button>';
+  }
+  modal.classList.add('active');
+  setTimeout(() => {
+    const b = document.getElementById('modal-primary-btn');
+    if (b) b.focus();
+  }, 100);
+}
+
+function acceptArtifact(index) {
+  if (gameState.carriedArtifact) return;
+  const artifact = artifacts[index];
+  gameState.carriedArtifact = artifact;
+  gameState.hasArtifact = true;
+  const bonus = Math.max(0, artifact.cohBonus - 3 * gameState.artifactsCollected);
+  gameState.artifactsCollected++;
+  gameState.coherence += bonus;
+  gameState.grid[gameState.playerPos.y][gameState.playerPos.x] = '.';
+  playSound('artifact');
+  closeMessage();
+  if (bonus > 0) caption('+' + bonus + ' COHERENCE');
+  updateHUD();
+}
+
+function tradeArtifact(index) {
+  const newArtifact = artifacts[index];
+  gameState.carriedArtifact = newArtifact;
+  const bonus = Math.max(0, newArtifact.cohBonus - 3 * gameState.artifactsCollected);
+  gameState.artifactsCollected++;
+  gameState.coherence += bonus;
+  gameState.grid[gameState.playerPos.y][gameState.playerPos.x] = '.';
+  playSound('artifact');
+  closeMessage();
+  if (bonus > 0) caption('+' + bonus + ' COHERENCE');
+  updateHUD();
+}
+
+function declineArtifact() {
+  closeMessage();
+  updateHUD();
+}
+
+function showExitPrompt() {
+  const modal = document.getElementById('modal');
+  document.getElementById('modal-title').textContent = 'THE WAY OUT';
+  document.getElementById('modal-text').innerHTML =
+    'ARTIFACTS RECOVERED: ' + gameState.artifactsCollected + '/4<br>' +
+    'COHERENCE REMAINING: ' + Math.max(0, gameState.coherence) + '<br><br>' +
+    '<em>Transmit what you have, or go back for more?</em>';
+  document.getElementById('modal-buttons').innerHTML =
+    '<button onclick="winGame()" id="modal-primary-btn">TRANSMIT</button>' +
+    '<button onclick="closeMessage()">GO BACK</button>';
+  modal.classList.add('active');
+  setTimeout(() => {
+    const b = document.getElementById('modal-primary-btn');
+    if (b) b.focus();
+  }, 100);
+}
+
+function showMessage(title, message, isGameEnd) {
+  const modal = document.getElementById('modal');
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-text').innerHTML = message;
+  document.getElementById('modal-buttons').innerHTML = isGameEnd
+    ? '<button onclick="resetGame()" id="modal-primary-btn">RESET SIGNAL [R]</button>'
+    : '<button onclick="closeMessage()" id="modal-primary-btn">CONTINUE</button>';
+  modal.classList.add('active');
+  setTimeout(() => {
+    const b = document.getElementById('modal-primary-btn');
+    if (b) b.focus();
+  }, 100);
+}
+
+function closeMessage() {
+  document.getElementById('modal').classList.remove('active');
+}
+
+function winGame() {
+  gameState.gameOver = true;
+  gameState.won = true;
+  playSound('exit');
+
+  save.transmissions++;
+  if (gameState.artifactsCollected > save.bestArtifacts) {
+    save.bestArtifacts = gameState.artifactsCollected;
+  }
+  persist();
+
+  const tier = Math.max(1, Math.min(4, gameState.artifactsCollected));
+  const coh = Math.max(0, gameState.coherence);
+  const band = coh >= 12 ? 'high' : coh >= 6 ? 'medium' : 'low';
+  const message =
+    'ARTIFACTS RECOVERED: ' + gameState.artifactsCollected + '<br>' +
+    'COHERENCE REMAINING: ' + coh + '<br><br>' +
+    '<em>' + ENDINGS[tier][band] + '</em>';
+
+  closeMessage();
+  setTimeout(() => showMessage('TRANSMISSION COMPLETE', message, true), 700);
+}
+
+function loseGame() {
+  gameState.gameOver = true;
+  playSound('death');
+  persist();
+  const n = gameState.artifactsCollected;
+  const detail = n > 0
+    ? 'DISSOLUTION · ' + n + (n === 1 ? ' ARTIFACT' : ' ARTIFACTS') + ' LOST TO THE NOISE'
+    : 'DISSOLUTION · COHERENCE COLLAPSED';
+  updateHUD();
+  setTimeout(() => showMessage('SIGNAL LOST', detail, true), 900);
+}
+
+function resetGame() {
+  gameState.coherence = START_COH;
+  gameState.belowThreshold = false;
+  gameState.turnCounter = 0;
+  gameState.carriedArtifact = null;
+  gameState.gameOver = false;
+  gameState.won = false;
+  gameState.hasArtifact = false;
+  gameState.artifactsCollected = 0;
+  gameState.turnsBelow = 0;
+  gameState.playerPos = { x: 1, y: 1 };
+  gameState.dir = 1;
+  gameState.grid = generateLevel();
+  save.runs++;
+  persist();
+
+  audioThreshold.pause();
+  audioThreshold.currentTime = 0;
+  audioMain.currentTime = 0;
+  audioMain.play().catch(() => {});
+
+  closeMessage();
+  snapCamera();
+  updateHUD();
+  caption('SIGNAL RESTORED · FIND THE ARTIFACTS');
+}
+
+/* ===== HUD ===== */
+let lastCoherence = START_COH;
+
+function updateHUD() {
+  document.getElementById('coh-value').textContent = Math.max(0, gameState.coherence);
+  const fill = document.getElementById('coh-fill');
+  fill.style.width = Math.max(0, Math.min(100, (gameState.coherence / START_COH) * 100)) + '%';
+  fill.className = gameState.coherence >= 15 ? '' : gameState.coherence >= 8 ? 'medium' : 'low';
+  lastCoherence = gameState.coherence;
+
+  document.getElementById('found-value').textContent = gameState.artifactsCollected + '/4';
+  document.getElementById('carry-line').textContent =
+    'CARRY: ' + (gameState.carriedArtifact ? gameState.carriedArtifact.name : 'NONE');
+  document.getElementById('effect-line').textContent =
+    gameState.carriedArtifact ? gameState.carriedArtifact.description.toLowerCase() : '';
+
+  // Void Compass: bearing to the exit
+  const compassEl = document.getElementById('compass-line');
+  if (gameState.carriedArtifact && gameState.carriedArtifact.effect === 'compass') {
+    const dx = (GRID - 2) - gameState.playerPos.x;
+    const dy = 1 - gameState.playerPos.y;
+    const bearing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'E' : 'W') : (dy > 0 ? 'S' : 'N');
+    compassEl.textContent = 'COMPASS: EXIT ' + bearing;
+  } else {
+    compassEl.textContent = '';
+  }
+}
+
+let captionTimer = null;
+function caption(text, dur) {
+  const el = document.getElementById('caption');
+  el.textContent = text;
+  el.classList.add('visible');
+  clearTimeout(captionTimer);
+  captionTimer = setTimeout(() => el.classList.remove('visible'), (dur || 2.6) * 1000);
+}
+
+let flashTimer = null;
+function flash(kind) {
+  if (reducedMotion) return;
+  const el = document.getElementById('flash');
+  el.className = kind;
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => { el.className = ''; }, 90);
+}
+
+/* ===== RENDERER: phosphor raycaster at 320x200 ===== */
+const view = document.getElementById('view');
+const vctx = view.getContext('2d');
+const frame = document.createElement('canvas');
+frame.width = RW; frame.height = RH;
+const fctx = frame.getContext('2d');
+const img = fctx.createImageData(RW, RH);
+const px32 = new Uint32Array(img.data.buffer);
+const zbuf = new Float32Array(RW);
+
+function resizeView() {
+  view.width = window.innerWidth;
+  view.height = window.innerHeight;
+  vctx.imageSmoothingEnabled = false;
+}
+window.addEventListener('resize', resizeView);
+resizeView();
+
+// Pre-rendered sprite plates (drawn procedurally once)
+function makePlate(draw) {
+  const c = document.createElement('canvas');
+  c.width = 64; c.height = 64;
+  draw(c.getContext('2d'));
+  return c;
+}
+
+const PLATES = {
+  '*': makePlate((c) => { // artifact: gold diamond + star
+    const g = c.createRadialGradient(32, 32, 2, 32, 32, 30);
+    g.addColorStop(0, 'rgba(215,192,122,0.9)');
+    g.addColorStop(0.4, 'rgba(215,192,122,0.25)');
+    g.addColorStop(1, 'rgba(215,192,122,0)');
+    c.fillStyle = g; c.fillRect(0, 0, 64, 64);
+    c.strokeStyle = '#d7c07a'; c.lineWidth = 2.5;
+    c.beginPath(); c.moveTo(32, 8); c.lineTo(52, 32); c.lineTo(32, 56); c.lineTo(12, 32); c.closePath(); c.stroke();
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.moveTo(32, 18); c.lineTo(32, 46); c.moveTo(18, 32); c.lineTo(46, 32);
+    c.moveTo(22, 22); c.lineTo(42, 42); c.moveTo(42, 22); c.lineTo(22, 42);
+    c.stroke();
+  }),
+  'O': makePlate((c) => { // anchor: cyan pillar ring
+    const g = c.createRadialGradient(32, 36, 2, 32, 36, 28);
+    g.addColorStop(0, 'rgba(127,182,194,0.8)');
+    g.addColorStop(0.5, 'rgba(127,182,194,0.2)');
+    g.addColorStop(1, 'rgba(127,182,194,0)');
+    c.fillStyle = g; c.fillRect(0, 0, 64, 64);
+    c.strokeStyle = '#7fb6c2'; c.lineWidth = 2.5;
+    c.beginPath(); c.moveTo(32, 6); c.lineTo(44, 34); c.lineTo(32, 60); c.lineTo(20, 34); c.closePath(); c.stroke();
+    c.beginPath(); c.arc(32, 34, 8, 0, Math.PI * 2); c.stroke();
+  }),
+  '~': makePlate((c) => { // distortion: magenta jagged shard
+    const g = c.createRadialGradient(32, 32, 2, 32, 32, 32);
+    g.addColorStop(0, 'rgba(176,106,149,0.85)');
+    g.addColorStop(0.5, 'rgba(176,106,149,0.3)');
+    g.addColorStop(1, 'rgba(176,106,149,0)');
+    c.fillStyle = g; c.fillRect(0, 0, 64, 64);
+    c.strokeStyle = '#b06a95'; c.lineWidth = 2.5;
+    c.beginPath();
+    c.moveTo(32, 4); c.lineTo(44, 22); c.lineTo(38, 30); c.lineTo(50, 44);
+    c.lineTo(34, 60); c.lineTo(26, 44); c.lineTo(16, 38); c.lineTo(26, 24); c.closePath();
+    c.stroke();
+    c.lineWidth = 1.2;
+    c.beginPath(); c.moveTo(30, 14); c.lineTo(34, 30); c.lineTo(28, 46); c.stroke();
+  }),
+  'X': makePlate((c) => { // exit: nested green portal
+    const g = c.createRadialGradient(32, 32, 2, 32, 32, 30);
+    g.addColorStop(0, 'rgba(121,191,161,0.95)');
+    g.addColorStop(0.5, 'rgba(121,191,161,0.3)');
+    g.addColorStop(1, 'rgba(121,191,161,0)');
+    c.fillStyle = g; c.fillRect(0, 0, 64, 64);
+    c.strokeStyle = '#79bfa1';
+    c.lineWidth = 2.5;
+    c.beginPath(); c.moveTo(32, 4); c.lineTo(58, 32); c.lineTo(32, 60); c.lineTo(6, 32); c.closePath(); c.stroke();
+    c.lineWidth = 1.6;
+    c.beginPath(); c.moveTo(32, 14); c.lineTo(48, 32); c.lineTo(32, 50); c.lineTo(16, 32); c.closePath(); c.stroke();
+    c.lineWidth = 1;
+    c.beginPath(); c.moveTo(32, 22); c.lineTo(40, 32); c.lineTo(32, 42); c.lineTo(24, 32); c.closePath(); c.stroke();
+  })
+};
+
+function rgba32(r, g, b) {
+  return (255 << 24) | (b << 16) | (g << 8) | r;
+}
+
+function render(now) {
+  const grid = gameState.grid;
+  if (!grid.length) return;
+
+  const fogFar = (gameState.carriedArtifact && gameState.carriedArtifact.effect === 'clarity') ? 9.5 : FOG_BASE;
+  const below = gameState.belowThreshold;
+
+  const dirX = Math.cos(cam.ang), dirY = Math.sin(cam.ang);
+  const planeX = -dirY * FOV_PLANE, planeY = dirX * FOV_PLANE;
+  const pulse = 0.75 + 0.25 * Math.sin(now / 300);
+
+  // --- ceiling (rows 0..99): void gradient, warmer below threshold ---
+  for (let y = 0; y < RH / 2; y++) {
+    const t = y / (RH / 2);
+    const r = Math.round((below ? 14 : 5) * (1 - t) + 3);
+    const g = Math.round((below ? 8 : 12) * (1 - t) + 4);
+    const b = Math.round((below ? 8 : 10) * (1 - t) + 5);
+    const c = rgba32(r, g, b);
+    const row = y * RW;
+    for (let x = 0; x < RW; x++) px32[row + x] = c;
+  }
+
+  // --- floor (rows 100..199): cast the phosphor grid ---
+  const rayL_X = dirX - planeX, rayL_Y = dirY - planeY;
+  const rayR_X = dirX + planeX, rayR_Y = dirY + planeY;
+  for (let y = RH / 2 + 1; y < RH; y++) {
+    const rowDist = (RH / 2) / (y - RH / 2);
+    const stepX = rowDist * (rayR_X - rayL_X) / RW;
+    const stepY = rowDist * (rayR_Y - rayL_Y) / RW;
+    let fx = cam.x + rowDist * rayL_X;
+    let fy = cam.y + rowDist * rayL_Y;
+    const fog = Math.max(0, 1 - rowDist / fogFar);
+    const row = y * RW;
+    for (let x = 0; x < RW; x++) {
+      const cellX = fx | 0, cellY = fy | 0;
+      const u = fx - cellX, v = fy - cellY;
+      const tile = (cellX >= 0 && cellY >= 0 && cellX < GRID && cellY < GRID) ? grid[cellY][cellX] : '#';
+
+      // base + tile tint
+      let r = 4, g = 8, b = 6;
+      if (tile === '+') { r = 42; g = 26; b = 14; }
+      else if (tile === '~') { r = 30; g = 10; b = 22; }
+      else if (tile === 'O') { r = 8; g = 22; b = 26; }
+      else if (tile === 'X') { r = 8; g = 30; b = 18; }
+
+      // grid lines
+      const line = (u < 0.06 || v < 0.06);
+      if (line) {
+        if (tile === '+') { r = 200; g = 130; b = 80; }
+        else if (tile === '~') { r = 150 * pulse | 0; g = 70; b = 120; }
+        else { r = 24; g = 90; b = 62; }
+      }
+
+      px32[row + x] = rgba32((r * fog) | 0, (g * fog) | 0, (b * fog) | 0);
+      fx += stepX; fy += stepY;
+    }
+  }
+
+  // --- walls: DDA per column ---
+  for (let x = 0; x < RW; x++) {
+    const camX = 2 * x / RW - 1;
+    const rdX = dirX + planeX * camX;
+    const rdY = dirY + planeY * camX;
+
+    let mapX = cam.x | 0, mapY = cam.y | 0;
+    const dDX = Math.abs(1 / (rdX || 1e-9));
+    const dDY = Math.abs(1 / (rdY || 1e-9));
+    let stepX, stepY, sideX, sideY;
+    if (rdX < 0) { stepX = -1; sideX = (cam.x - mapX) * dDX; }
+    else { stepX = 1; sideX = (mapX + 1 - cam.x) * dDX; }
+    if (rdY < 0) { stepY = -1; sideY = (cam.y - mapY) * dDY; }
+    else { stepY = 1; sideY = (mapY + 1 - cam.y) * dDY; }
+
+    let side = 0, hit = false, guard = 0;
+    while (!hit && guard++ < 64) {
+      if (sideX < sideY) { sideX += dDX; mapX += stepX; side = 0; }
+      else { sideY += dDY; mapY += stepY; side = 1; }
+      if (mapX < 0 || mapY < 0 || mapX >= GRID || mapY >= GRID || grid[mapY][mapX] === '#') hit = true;
+    }
+
+    const perp = side === 0 ? (sideX - dDX) : (sideY - dDY);
+    const dist = Math.max(0.05, perp);
+    zbuf[x] = dist;
+
+    const lineH = Math.min(RH * 3, (RH / dist) | 0);
+    const drawStart = Math.max(0, (RH / 2 - lineH / 2) | 0);
+    const drawEnd = Math.min(RH - 1, (RH / 2 + lineH / 2) | 0);
+
+    const fog = Math.max(0, 1 - dist / fogFar);
+    const shade = (side === 1 ? 0.75 : 1) * fog;
+    // wall body: dark slab with faint phosphor
+    const wr = (10 * shade) | 0, wg = (26 * shade) | 0, wb = (20 * shade) | 0;
+    const body = rgba32(wr, wg, wb);
+    const edge = rgba32((30 * shade) | 0, (150 * shade) | 0, (105 * shade) | 0);
+
+    for (let y = drawStart; y <= drawEnd; y++) {
+      // glowing top/bottom edges (the Tron line)
+      const isEdge = (y - drawStart < 2) || (drawEnd - y < 2);
+      px32[y * RW + x] = isEdge ? edge : body;
+    }
+  }
+
+  fctx.putImageData(img, 0, 0);
+
+  // --- sprites: billboards with per-strip occlusion ---
+  const invDet = 1 / (planeX * dirY - dirX * planeY);
+  const sprites = [];
+  for (let gy = 0; gy < GRID; gy++) {
+    for (let gx = 0; gx < GRID; gx++) {
+      const t = grid[gy][gx];
+      if (t === '*' || t === 'O' || t === '~' || t === 'X') {
+        const sx = gx + 0.5 - cam.x, sy = gy + 0.5 - cam.y;
+        const depth = sx * sx + sy * sy;
+        if (depth < fogFar * fogFar * 2.2) sprites.push({ t, sx, sy, depth });
+      }
+    }
+  }
+  sprites.sort((a, b) => b.depth - a.depth);
+
+  const invert = gameState.carriedArtifact && gameState.carriedArtifact.effect === 'invert';
+
+  for (const s of sprites) {
+    const trX = invDet * (dirY * s.sx - dirX * s.sy);
+    const trY = invDet * (-planeY * s.sx + planeX * s.sy);
+    if (trY <= 0.1) continue;
+    const screenX = ((RW / 2) * (1 + trX / trY)) | 0;
+    let size = Math.abs((RH / trY) | 0);
+    if (s.t === '~') size = (size * (0.85 + 0.15 * pulse)) | 0;
+    const half = size >> 1;
+    const floorLine = (RH / 2 + (RH / 2) / trY) | 0;
+    const top = floorLine - size;
+
+    let plate = PLATES[s.t];
+    if (invert && s.t === '~') plate = PLATES['O'];
+    else if (invert && s.t === 'O') plate = PLATES['~'];
+
+    const fog = Math.max(0, 1 - trY / fogFar);
+    if (fog <= 0.02) continue;
+    fctx.globalAlpha = Math.min(1, fog * 1.2) * (s.t === '~' ? pulse : 1);
+
+    const x0 = Math.max(0, screenX - half);
+    const x1 = Math.min(RW - 1, screenX + half);
+    const stripW = Math.max(1, ((x1 - x0) / 24) | 0); // coarse strips are era-correct
+    for (let sx2 = x0; sx2 <= x1; sx2 += stripW) {
+      if (trY >= zbuf[Math.min(RW - 1, sx2)]) continue;
+      const u = (sx2 - (screenX - half)) / size;
+      fctx.drawImage(plate, (u * 64) | 0, 0, Math.max(1, (stripW / size) * 64), 64,
+        sx2, top, stripW, size);
+    }
+    fctx.globalAlpha = 1;
+  }
+
+  // scale up to the window (pixelated)
+  const scale = Math.min(view.width / RW, view.height / RH);
+  const dw = (RW * scale) | 0, dh = (RH * scale) | 0;
+  const dx = (view.width - dw) >> 1, dy = (view.height - dh) >> 1;
+  vctx.fillStyle = '#020302';
+  vctx.fillRect(0, 0, view.width, view.height);
+  vctx.drawImage(frame, dx, dy, dw, dh);
+}
+
+/* ===== MAIN LOOP ===== */
+let lastFrameTime = 0;
+
+function loop(now) {
+  if (typeof now !== 'number') now = lastFrameTime;
+  const dt = Math.max(0, Math.min(50, now - lastFrameTime));
+  lastFrameTime = now;
+  const frames = dt / 16.67;
+
+  // ease the camera toward the player's pose
+  const tx = gameState.playerPos.x + 0.5;
+  const ty = gameState.playerPos.y + 0.5;
+  const ta = targetAngle();
+  if (reducedMotion) {
+    cam.x = tx; cam.y = ty; cam.ang = ta;
+  } else {
+    const k = 1 - Math.pow(0.78, frames);
+    cam.x += (tx - cam.x) * k;
+    cam.y += (ty - cam.y) * k;
+    let dAng = ta - cam.ang;
+    while (dAng > Math.PI) dAng -= Math.PI * 2;
+    while (dAng < -Math.PI) dAng += Math.PI * 2;
+    cam.ang += dAng * k;
+  }
+
+  if (gameState.started) render(now);
+  requestAnimationFrame(loop);
+}
+
+/* ===== INPUT ===== */
+document.addEventListener('keydown', (e) => {
+  if (e.repeat) return; // one press, one step — always
+
+  const bootActive = !document.getElementById('boot').classList.contains('hidden');
+  if (bootActive) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      startGame();
+    }
+    return;
+  }
+
+  if (e.key === 'm' || e.key === 'M') { setMuted(!muted); return; }
+
+  if (gameState.gameOver) {
+    if (e.key === 'r' || e.key === 'R') resetGame();
+    return;
+  }
+
+  if (modalActive()) {
+    if (e.key === 'Escape') {
+      const btns = document.getElementById('modal-buttons').querySelectorAll('button');
+      if (btns.length > 0) btns[btns.length - 1].click();
+      return;
+    }
+    if (e.key === 'Enter' || e.key === ' ') {
+      const focused = document.activeElement;
+      if (focused && focused.tagName === 'BUTTON') { e.preventDefault(); focused.click(); }
+      return;
+    }
+    // left/right move focus between buttons
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'a' || e.key === 'd') {
+      e.preventDefault();
+      const btns = Array.from(document.getElementById('modal-buttons').querySelectorAll('button'));
+      let i = btns.indexOf(document.activeElement);
+      if (i === -1) i = 0;
+      else i = (i + (e.key === 'ArrowLeft' || e.key === 'a' ? -1 : 1) + btns.length) % btns.length;
+      btns[i].focus();
+      return;
+    }
+    return;
+  }
+
+  switch (e.key) {
+    case 'ArrowUp': case 'w': case 'W': e.preventDefault(); stepPlayer(1); break;
+    case 'ArrowDown': case 's': case 'S': e.preventDefault(); stepPlayer(-1); break;
+    case 'ArrowLeft': case 'a': case 'A': e.preventDefault(); turnPlayer(-1); break;
+    case 'ArrowRight': case 'd': case 'D': e.preventDefault(); turnPlayer(1); break;
+    case 'q': case 'Q': e.preventDefault(); stepPlayer(2); break;
+    case 'e': case 'E': e.preventDefault(); stepPlayer(3); break;
+  }
+});
+
+// Touch: left/right thirds turn, center-top steps forward, center-bottom back
+view.addEventListener('pointerdown', (e) => {
+  if (!gameState.started || gameState.gameOver || modalActive()) return;
+  const w = window.innerWidth, h = window.innerHeight;
+  if (e.clientX < w * 0.32) turnPlayer(-1);
+  else if (e.clientX > w * 0.68) turnPlayer(1);
+  else if (e.clientY < h * 0.55) stepPlayer(1);
+  else stepPlayer(-1);
+});
+
+document.getElementById('mute-btn').addEventListener('click', () => setMuted(!muted));
+document.getElementById('boot-btn').addEventListener('click', startGame);
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) lastFrameTime = performance.now();
+});
+
+/* ===== BOOT ===== */
+function startGame() {
+  if (gameState.started) return;
+  if (window.AudioContext || window.webkitAudioContext) {
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  audioMain.volume = 0.5;
+  audioThreshold.volume = 0.5;
+  setMuted(muted);
+  audioMain.play().catch(() => {});
+
+  gameState.grid = generateLevel();
+  save.runs++;
+  persist();
+  snapCamera();
+  gameState.started = true;
+
+  document.getElementById('boot').classList.add('hidden');
+  document.getElementById('hud').classList.add('visible');
+  document.getElementById('status-right').classList.add('visible');
+  document.getElementById('instructions').classList.add('visible');
+  updateHUD();
+  caption('FIND AN ARTIFACT · REACH THE EXIT', 4);
+}
+
+(function boot() {
+  document.getElementById('mute-btn').textContent = muted ? 'sound off' : 'sound on';
+  if (save.runs > 0) {
+    document.getElementById('boot-lifetime').textContent =
+      'RUNS: ' + save.runs + ' · TRANSMISSIONS: ' + save.transmissions +
+      ' · BEST: ' + save.bestArtifacts + ' ARTIFACTS';
+  }
+  requestAnimationFrame((n) => { lastFrameTime = n; requestAnimationFrame(loop); });
+})();
+</script>
+</body>
+</html>
