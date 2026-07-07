@@ -40,57 +40,97 @@
             overflow: hidden;
         }
 
-        .container {
-            text-align: center;
-            max-width: 100%;
+        /* The winter night IS the page — canvas fills the window */
+        #canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            touch-action: none;
         }
 
         header {
-            margin-bottom: 1rem;
+            position: fixed;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 10;
+            pointer-events: none;
             animation: fadeIn 1.5s ease-out;
         }
 
         h1 {
             font-family: 'Cormorant Garamond', serif;
-            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            font-size: clamp(1.2rem, 2.6vw, 1.7rem);
             font-weight: 400;
             letter-spacing: 0.4rem;
             text-transform: uppercase;
             color: var(--snow-white);
-            text-shadow: 0 2px 10px rgba(116, 185, 255, 0.3);
+            text-shadow: 0 2px 14px rgba(116, 185, 255, 0.4);
         }
 
         .subtitle {
-            font-size: clamp(0.65rem, 1.5vw, 0.8rem);
+            font-size: clamp(0.6rem, 1.3vw, 0.72rem);
             color: var(--text-dim);
             letter-spacing: 0.2rem;
             text-transform: lowercase;
             font-style: italic;
-            margin-top: 0.3rem;
+            margin-top: 0.2rem;
         }
 
-        #game-container {
-            display: inline-block;
-            padding: 0.75rem;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(116, 185, 255, 0.2);
-            border-radius: 8px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+        #mute-btn {
+            position: fixed;
+            top: 12px;
+            right: 14px;
+            z-index: 20;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.72rem;
+            letter-spacing: 0.1rem;
+            color: rgba(226, 232, 240, 0.55);
+            background: rgba(26, 26, 46, 0.4);
+            border: 1px solid rgba(116, 185, 255, 0.25);
+            border-radius: 999px;
+            padding: 5px 12px;
+            cursor: pointer;
+            transition: color 0.25s ease, border-color 0.25s ease;
         }
+        #mute-btn:hover { color: var(--snow-white); border-color: rgba(116, 185, 255, 0.5); }
 
-        canvas {
-            display: block;
-            border-radius: 4px;
-            image-rendering: pixelated;
+        /* Caption line — storm events speak here */
+        #caption {
+            position: fixed;
+            bottom: 108px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 15;
+            max-width: 90vw;
+            text-align: center;
+            font-family: 'Cormorant Garamond', serif;
+            font-style: italic;
+            font-size: clamp(0.95rem, 2.4vw, 1.2rem);
+            color: rgba(226, 232, 240, 0.85);
+            letter-spacing: 0.06rem;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+            pointer-events: none;
+            text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
         }
+        #caption.visible { opacity: 1; }
 
-        /* Stamina bar */
+        /* Stamina bar floats above the status line */
         #stamina-container {
+            position: fixed;
+            bottom: 58px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 0.75rem;
-            margin-top: 0.75rem;
+            pointer-events: none;
         }
 
         #stamina-label {
@@ -177,10 +217,16 @@
         }
 
         #status {
-            margin-top: 0.5rem;
-            font-size: clamp(0.7rem, 1.5vw, 0.85rem);
+            position: fixed;
+            bottom: 34px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            pointer-events: none;
+            font-size: clamp(0.65rem, 1.4vw, 0.78rem);
             color: var(--text-dim);
             letter-spacing: 0.15rem;
+            text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7);
         }
 
         #status span {
@@ -189,11 +235,32 @@
         }
 
         .instructions {
-            margin-top: 0.75rem;
-            font-size: clamp(0.6rem, 1.3vw, 0.72rem);
+            position: fixed;
+            bottom: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            pointer-events: none;
+            font-size: clamp(0.58rem, 1.2vw, 0.68rem);
             color: var(--text-dim);
             letter-spacing: 0.1rem;
             font-style: italic;
+            text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7);
+        }
+
+        .lifetime {
+            margin-top: -0.6rem;
+            margin-bottom: 1.2rem;
+            font-size: 0.68rem;
+            letter-spacing: 0.12rem;
+            color: var(--text-dim);
+            min-height: 1em;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .snowflake { display: none; }
+            #stamina-bar.exhausted, .buff, .buff.debuff { animation: none; }
+            header { animation: none; }
         }
 
         /* Audio init overlay */
@@ -323,21 +390,22 @@
         <div class="init-content">
             <h2>Cold Drift</h2>
             <p>keep the paths clear</p>
+            <div class="lifetime" id="title-lifetime"></div>
             <button onclick="initGame()" autofocus>begin shoveling</button>
         </div>
     </div>
 
-    <div class="container">
-        <header>
-            <h1>Cold Drift</h1>
-            <div class="subtitle">a shoveling meditation</div>
-        </header>
+    <canvas id="canvas"></canvas>
+    <button id="mute-btn" aria-label="toggle sound">sound on</button>
 
-        <div id="game-container">
-            <canvas id="canvas"></canvas>
-        </div>
+    <header>
+        <h1>Cold Drift</h1>
+        <div class="subtitle">a shoveling meditation</div>
+    </header>
 
-        <div id="stamina-container">
+    <div id="caption"></div>
+
+    <div id="stamina-container">
             <div id="stamina-label">stamina</div>
             <div id="stamina-bar-bg">
                 <div id="stamina-bar"></div>
@@ -349,15 +417,15 @@
             </div>
         </div>
 
-        <div id="status">
-            cleared: <span id="cleared-count">0</span> |
-            rescued: <span id="rescued-count">0</span> |
-            wizards: <span id="wizard-count">0</span>
-        </div>
+    <div id="status">
+        cleared: <span id="cleared-count">0</span> |
+        rescued: <span id="rescued-count">0</span> |
+        wizards: <span id="wizard-count">0</span> |
+        storms: <span id="storm-count">0</span>
+    </div>
 
-        <div class="instructions">
-            wasd or arrows to move • rest to recover stamina • each animal grants a unique gift
-        </div>
+    <div class="instructions">
+        one press, one step • rest to recover • rescue every neighbor and the storm breaks
     </div>
 
     <audio id="music" loop>
@@ -369,9 +437,73 @@
         // CONSTANTS
         // ============================================
         const GRID_SIZE = 24;
-        const TILE_SIZE = 20;
+        let TILE_SIZE = 20;
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
+
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        // ============================================
+        // PERSISTENCE — the winter remembers
+        // ============================================
+        const SAVE_KEY = 'cold-drift-save';
+
+        function loadSave() {
+            try {
+                const raw = localStorage.getItem(SAVE_KEY);
+                if (raw) return Object.assign(defaultSave(), JSON.parse(raw));
+            } catch (e) { /* private mode — play without memory */ }
+            return defaultSave();
+        }
+        function defaultSave() { return { storms: 0, rescued: 0, cleared: 0, muted: false }; }
+        function persist() {
+            try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
+        }
+        const save = loadSave();
+        let muted = save.muted;
+
+        function setMuted(m) {
+            muted = m;
+            save.muted = m;
+            persist();
+            document.getElementById('music').muted = m;
+            document.getElementById('mute-btn').textContent = m ? 'sound off' : 'sound on';
+        }
+
+        // ============================================
+        // VIEW — the yard floats in the winter night
+        // ============================================
+        let W = 0, H = 0, originX = 0, originY = 0;
+        let auroraBands = [];
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            canvas.width = W;
+            canvas.height = H;
+            TILE_SIZE = Math.max(14, Math.floor(Math.min((W * 0.9) / GRID_SIZE, (H * 0.72) / GRID_SIZE)));
+            originX = (W - GRID_SIZE * TILE_SIZE) / 2;
+            originY = (H - GRID_SIZE * TILE_SIZE) / 2 + H * 0.02;
+            makeAurora();
+        }
+
+        function makeAurora() {
+            auroraBands = [
+                { x: 0.22, hue: 'rgba(106, 176, 76, A)', width: 0.16, ph: 0 },
+                { x: 0.52, hue: 'rgba(116, 185, 255, A)', width: 0.20, ph: 2.1 },
+                { x: 0.78, hue: 'rgba(160, 112, 192, A)', width: 0.13, ph: 4.2 }
+            ];
+        }
+
+        // Caption line for storm events
+        let captionTimer = null;
+        function caption(text, dur) {
+            const el = document.getElementById('caption');
+            el.textContent = text;
+            el.classList.add('visible');
+            clearTimeout(captionTimer);
+            captionTimer = setTimeout(() => el.classList.remove('visible'), (dur || 4.5) * 1000);
+        }
 
         // Tile types
         const TILE = {
@@ -443,7 +575,10 @@
             // Buffs & Debuffs
             freeShovels: 0,     // Bird: free shovel charges
             speedBoostEnd: 0,   // Squirrel: timestamp when speed boost ends
-            wizardSlowEnd: 0    // Wizard: timestamp when slowdown ends
+            wizardSlowEnd: 0,   // Wizard: timestamp when slowdown ends
+            // Storm arc
+            stormBreak: false,
+            stormBreakTimer: 0
         };
 
         // ============================================
@@ -453,15 +588,17 @@
         let audioContext = null;
 
         function initGame() {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            if (window.AudioContext || window.webkitAudioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
             music.volume = 0.4;
+            setMuted(muted); // apply persisted preference
             music.play().catch(err => console.log('Audio error:', err));
 
             document.getElementById('audio-init').classList.add('hidden');
 
-            // Set up canvas
-            canvas.width = GRID_SIZE * TILE_SIZE;
-            canvas.height = GRID_SIZE * TILE_SIZE;
+            resize();
+            window.addEventListener('resize', resize);
 
             generateMap();
             game.running = true;
@@ -469,11 +606,13 @@
             requestAnimationFrame(gameLoop);
 
             // Create background snowflakes
-            createBackgroundSnow();
+            if (!reducedMotion) createBackgroundSnow();
+
+            setTimeout(() => caption('the neighbors are out there, under the drifts', 5), 1200);
         }
 
         function playSound(type) {
-            if (!audioContext) return;
+            if (!audioContext || muted) return;
 
             const now = audioContext.currentTime;
             const osc = audioContext.createOscillator();
@@ -793,6 +932,7 @@
             const snowAmount = game.snow[y][x];
             game.snow[y][x] = 0;
             game.clearedCount++;
+            save.cleared++; // persisted on the next rescue/storm event
 
             // Check for free shovels (bird buff)
             if (game.freeShovels > 0) {
@@ -843,6 +983,8 @@
                     animal.revealed = true;
                     playSound('rescue');
                     game.rescuedCount++;
+                    save.rescued++;
+                    persist();
                     updateStatus();
 
                     // Apply effect based on animal type
@@ -1049,11 +1191,16 @@
         // ============================================
         // SNOW FALLING
         // ============================================
-        function snowFall() {
-            game.snowTimer++;
+        function snowFall(frames) {
+            if (game.stormBreak) return; // the storm is resting
+
+            game.snowTimer += frames;
 
             if (game.snowTimer >= game.snowInterval) {
                 game.snowTimer = 0;
+
+                // The storm slowly builds — snowfall quickens as it deepens
+                game.snowInterval = Math.max(60, game.snowInterval - 1.5);
 
                 // Add snow to random tiles (prefer paths that are clear)
                 const snowCount = 2 + Math.floor(Math.random() * 3);
@@ -1076,17 +1223,18 @@
         // ============================================
         // UPDATE
         // ============================================
-        function update() {
-            snowFall();
+        function update(frames) {
+            snowFall(frames);
+            updateStorm(frames);
 
             // Stamina recharge when resting
-            game.restTimer++;
+            game.restTimer += frames;
             if (game.restTimer > 30) { // Start recharging after ~0.5 seconds of rest
                 game.isMoving = false;
             }
 
             if (!game.isMoving && game.stamina < STAMINA.max) {
-                game.stamina = Math.min(STAMINA.max, game.stamina + STAMINA.rechargeRate);
+                game.stamina = Math.min(STAMINA.max, game.stamina + STAMINA.rechargeRate * frames);
                 updateStaminaBar();
             }
 
@@ -1096,10 +1244,10 @@
             // Update particles
             for (let i = game.particles.length - 1; i >= 0; i--) {
                 const p = game.particles[i];
-                p.x += p.vx;
-                p.y += p.vy;
-                p.vy += 0.15; // gravity
-                p.life--;
+                p.x += p.vx * frames;
+                p.y += p.vy * frames;
+                p.vy += 0.15 * frames; // gravity
+                p.life -= frames;
 
                 if (p.life <= 0) {
                     game.particles.splice(i, 1);
@@ -1109,8 +1257,8 @@
             // Update burst effects
             for (let i = game.burstEffects.length - 1; i >= 0; i--) {
                 const b = game.burstEffects[i];
-                b.radius += (b.maxRadius - b.radius) * 0.15;
-                b.life--;
+                b.radius += (b.maxRadius - b.radius) * (1 - Math.pow(0.85, frames));
+                b.life -= frames;
 
                 if (b.life <= 0) {
                     game.burstEffects.splice(i, 1);
@@ -1120,7 +1268,7 @@
             // Update fleeing animals
             for (const animal of game.animals) {
                 if (animal.fleeing && animal.fleePath && animal.fleeIndex < animal.fleePath.length) {
-                    animal.fleeTimer++;
+                    animal.fleeTimer += frames;
                     if (animal.fleeTimer >= 8) {
                         animal.fleeTimer = 0;
                         animal.fleeIndex++;
@@ -1135,17 +1283,130 @@
             // Update wizard fade
             for (const wizard of game.wizards) {
                 if (wizard.fadeTimer > 0) {
-                    wizard.fadeTimer--;
+                    wizard.fadeTimer -= frames;
                 }
             }
+        }
+
+        // ============================================
+        // THE STORM ARC — rescue everyone and it breaks
+        // ============================================
+        function updateStorm(frames) {
+            // All neighbors safe → the storm breaks
+            if (!game.stormBreak && game.animals.length > 0 &&
+                game.animals.every(a => a.revealed)) {
+                game.stormBreak = true;
+                game.stormBreakTimer = 600; // ~10 seconds of calm
+                save.storms++;
+                persist();
+                updateStatus();
+                playSound('rescue');
+                caption('the last neighbor is safe · the storm breaks', 6);
+            }
+
+            if (game.stormBreak) {
+                game.stormBreakTimer -= frames;
+                if (game.stormBreakTimer <= 0) {
+                    newStorm();
+                }
+            }
+        }
+
+        function newStorm() {
+            game.stormBreak = false;
+            game.snowInterval = 150;
+            game.snowTimer = 0;
+            generateMap(); // fresh yard, fresh drifts, new buried neighbors
+            game.freeShovels = 0;
+            game.speedBoostEnd = 0;
+            game.wizardSlowEnd = 0;
+            updateBuffDisplay();
+            caption('another storm rolls in', 5);
         }
 
         // ============================================
         // RENDERING
         // ============================================
         function render() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // === SCREEN SPACE: the winter night ===
+            drawWinterNight();
 
+            // === GAME SPACE: the yard ===
+            ctx.save();
+            ctx.translate(originX, originY);
+            drawYard();
+            ctx.restore();
+
+            // Frost vignette
+            const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.4, W / 2, H / 2, Math.max(W, H) * 0.72);
+            vg.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            vg.addColorStop(1, 'rgba(8, 10, 20, 0.45)');
+            ctx.fillStyle = vg;
+            ctx.fillRect(0, 0, W, H);
+        }
+
+        function drawWinterNight() {
+            const t = reducedMotion ? 0 : performance.now() / 1000;
+            const horizon = originY + GRID_SIZE * TILE_SIZE * 0.28;
+
+            // Deep night sky
+            const sky = ctx.createLinearGradient(0, 0, 0, H);
+            sky.addColorStop(0, '#0d0f22');
+            sky.addColorStop(0.45, '#16213e');
+            sky.addColorStop(1, '#1e2a4a');
+            ctx.fillStyle = sky;
+            ctx.fillRect(0, 0, W, H);
+
+            // Aurora curtains — brighter while the storm rests
+            const auroraLift = game.stormBreak ? 1.8 : 1;
+            for (const band of auroraBands) {
+                const sway = Math.sin(t * 0.12 + band.ph) * 0.05;
+                const bx = (band.x + sway) * W;
+                const bw = band.width * W;
+                const grad = ctx.createLinearGradient(bx - bw, 0, bx + bw, 0);
+                grad.addColorStop(0, band.hue.replace('A', '0'));
+                grad.addColorStop(0.5, band.hue.replace('A', (0.05 * auroraLift).toFixed(3)));
+                grad.addColorStop(1, band.hue.replace('A', '0'));
+                ctx.fillStyle = grad;
+                ctx.fillRect(bx - bw, 0, bw * 2, horizon * 1.1);
+            }
+
+            // Moon
+            ctx.fillStyle = 'rgba(230, 235, 245, 0.9)';
+            ctx.beginPath();
+            ctx.arc(W * 0.82, H * 0.14, 16, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#131530';
+            ctx.beginPath();
+            ctx.arc(W * 0.82 - 7, H * 0.14 - 4, 13, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Snowfield to the bottom of the window
+            ctx.fillStyle = '#26324e';
+            ctx.fillRect(0, horizon, W, H - horizon);
+
+            // Distant treeline across the full width
+            ctx.fillStyle = 'rgba(10, 14, 28, 0.85)';
+            for (let i = 0; i < Math.ceil(W / 46); i++) {
+                const tx = i * 46 + (i % 3) * 9;
+                const th = 30 + ((i * 31) % 34);
+                ctx.beginPath();
+                ctx.moveTo(tx - 13, horizon + 2);
+                ctx.lineTo(tx, horizon - th);
+                ctx.lineTo(tx + 13, horizon + 2);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // The yard's shadow grounds it in the snowfield
+            const bs = GRID_SIZE * TILE_SIZE;
+            ctx.fillStyle = 'rgba(5, 8, 18, 0.5)';
+            ctx.beginPath();
+            ctx.ellipse(W / 2, originY + bs + 12, bs * 0.6, 22, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawYard() {
             // Draw base tiles
             for (let y = 0; y < GRID_SIZE; y++) {
                 for (let x = 0; x < GRID_SIZE; x++) {
@@ -1563,6 +1824,7 @@
             document.getElementById('cleared-count').textContent = game.clearedCount;
             document.getElementById('rescued-count').textContent = game.rescuedCount;
             document.getElementById('wizard-count').textContent = game.wizardCount;
+            document.getElementById('storm-count').textContent = save.storms;
         }
 
         function updateStaminaBar() {
@@ -1632,7 +1894,11 @@
         function gameLoop(timestamp) {
             if (!game.running) return;
 
-            update();
+            if (typeof timestamp !== 'number') timestamp = game.lastTime;
+            const dt = Math.max(0, Math.min(50, timestamp - game.lastTime));
+            game.lastTime = timestamp;
+
+            update(dt / 16.67);
             render();
 
             requestAnimationFrame(gameLoop);
@@ -1642,6 +1908,10 @@
         // INPUT
         // ============================================
         document.addEventListener('keydown', (e) => {
+            // One press, one step — held keys don't plow. Every shovelful
+            // is a deliberate choice, the way Coherence moves.
+            if (e.repeat) return;
+
             // Check if audio init is active
             const audioInitActive = !document.getElementById('audio-init').classList.contains('hidden');
             if (audioInitActive) {
@@ -1649,6 +1919,11 @@
                     e.preventDefault();
                     initGame();
                 }
+                return;
+            }
+
+            if (e.key === 'm' || e.key === 'M') {
+                setMuted(!muted);
                 return;
             }
 
@@ -1703,6 +1978,20 @@
                 else if (dy < -20) movePlayer(0, -1);
             }
         });
+        // Mute button + the winter's memory (shown before you begin)
+        document.getElementById('mute-btn').addEventListener('click', () => setMuted(!muted));
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) game.lastTime = performance.now();
+        });
+        (function () {
+            document.getElementById('mute-btn').textContent = muted ? 'sound off' : 'sound on';
+            if (save.storms > 0 || save.rescued > 0) {
+                document.getElementById('title-lifetime').textContent =
+                    save.storms + ' storm' + (save.storms === 1 ? '' : 's') + ' weathered · ' +
+                    save.rescued + ' neighbor' + (save.rescued === 1 ? '' : 's') + ' rescued · ' +
+                    save.cleared + ' shovelfuls';
+            }
+        })();
     </script>
 </body>
 </html>
