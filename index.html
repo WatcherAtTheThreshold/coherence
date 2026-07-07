@@ -117,13 +117,14 @@
         }
 
         /* Fan rotation - outer cards offset down to compensate for rotation lift */
-        .card-flip:nth-child(1) { transform: rotate(-12deg) translateY(16px); }
-        .card-flip:nth-child(2) { transform: rotate(-8deg) translateY(8px); }
-        .card-flip:nth-child(3) { transform: rotate(-4deg) translateY(3px); }
-        .card-flip:nth-child(4) { transform: rotate(0deg) translateY(1px); }
-        .card-flip:nth-child(5) { transform: rotate(4deg) translateY(3px); }
-        .card-flip:nth-child(6) { transform: rotate(8deg) translateY(8px); }
-        .card-flip:nth-child(7) { transform: rotate(12deg) translateY(16px); }
+        .card-flip:nth-child(1) { transform: rotate(-14deg) translateY(20px); }
+        .card-flip:nth-child(2) { transform: rotate(-10deg) translateY(12px); }
+        .card-flip:nth-child(3) { transform: rotate(-6deg) translateY(6px); }
+        .card-flip:nth-child(4) { transform: rotate(-2deg) translateY(1px); }
+        .card-flip:nth-child(5) { transform: rotate(2deg) translateY(1px); }
+        .card-flip:nth-child(6) { transform: rotate(6deg) translateY(6px); }
+        .card-flip:nth-child(7) { transform: rotate(10deg) translateY(12px); }
+        .card-flip:nth-child(8) { transform: rotate(14deg) translateY(20px); }
 
         .card-flip-inner {
             position: relative;
@@ -189,14 +190,9 @@
             font-style: italic;
         }
 
-        /* Individual card colors */
-        .card-flip:nth-child(1) .card-title { color: var(--accent-green); }
-        .card-flip:nth-child(2) .card-title { color: var(--accent-amber); }
-        .card-flip:nth-child(3) .card-title { color: var(--accent-warm); }
-        .card-flip:nth-child(4) .card-title { color: var(--accent-cosmic); }
-        .card-flip:nth-child(5) .card-title { color: var(--accent-cold); }
-        .card-flip:nth-child(6) .card-title { color: var(--accent-gold); }
-        .card-flip:nth-child(7) .card-title { color: var(--accent-ember); }
+        /* Card colors travel WITH the card (inline --card), not its position —
+           reordering the fan never reshuffles identities */
+        .card-flip .card-title { color: var(--card, var(--text-bright)); }
 
         /* Container hover - spread cards */
         .card-spread:hover .card-flip {
@@ -220,51 +216,22 @@
             opacity: 1;
         }
 
-        .card-flip:nth-child(1):hover .card-front {
-            border-color: rgba(0, 255, 65, 0.5);
-            box-shadow: 0 8px 30px rgba(0, 255, 65, 0.2);
-        }
-
-        .card-flip:nth-child(2):hover .card-front {
-            border-color: rgba(212, 165, 116, 0.5);
-            box-shadow: 0 8px 30px rgba(212, 165, 116, 0.2);
-        }
-
-        .card-flip:nth-child(3):hover .card-front {
-            border-color: rgba(192, 112, 80, 0.5);
-            box-shadow: 0 8px 30px rgba(192, 112, 80, 0.2);
-        }
-
-        .card-flip:nth-child(4):hover .card-front {
-            border-color: rgba(160, 112, 192, 0.5);
-            box-shadow: 0 8px 30px rgba(160, 112, 192, 0.2);
-        }
-
-        .card-flip:nth-child(5):hover .card-front {
-            border-color: rgba(116, 185, 255, 0.5);
-            box-shadow: 0 8px 30px rgba(116, 185, 255, 0.2);
-        }
-
-        .card-flip:nth-child(6):hover .card-front {
-            border-color: rgba(232, 192, 128, 0.5);
-            box-shadow: 0 8px 30px rgba(232, 192, 128, 0.2);
-        }
-
-        .card-flip:nth-child(7):hover .card-front {
-            border-color: rgba(232, 160, 80, 0.5);
-            box-shadow: 0 8px 30px rgba(232, 160, 80, 0.2);
+        .card-flip:hover .card-front {
+            border-color: color-mix(in srgb, var(--card, #c4b8a5) 50%, transparent);
+            box-shadow: 0 8px 30px color-mix(in srgb, var(--card, #c4b8a5) 20%, transparent);
         }
 
         /* Entrance: a from-only keyframe lands on each card's natural fan
            rotation, so one animation serves any number of cards */
         .card-flip { animation: cardIn 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) both; }
         .card-flip:nth-child(1) { animation-delay: 0.05s; }
-        .card-flip:nth-child(2) { animation-delay: 0.11s; }
-        .card-flip:nth-child(3) { animation-delay: 0.17s; }
-        .card-flip:nth-child(4) { animation-delay: 0.23s; }
-        .card-flip:nth-child(5) { animation-delay: 0.29s; }
-        .card-flip:nth-child(6) { animation-delay: 0.35s; }
-        .card-flip:nth-child(7) { animation-delay: 0.41s; }
+        .card-flip:nth-child(2) { animation-delay: 0.10s; }
+        .card-flip:nth-child(3) { animation-delay: 0.15s; }
+        .card-flip:nth-child(4) { animation-delay: 0.20s; }
+        .card-flip:nth-child(5) { animation-delay: 0.25s; }
+        .card-flip:nth-child(6) { animation-delay: 0.30s; }
+        .card-flip:nth-child(7) { animation-delay: 0.35s; }
+        .card-flip:nth-child(8) { animation-delay: 0.40s; }
 
         @keyframes cardIn {
             from { opacity: 0; transform: translateY(30px) rotate(0deg) scale(0.95); }
@@ -359,12 +326,54 @@
     <div class="container">
         <header>
             <h1>Coherence</h1>
-            <p class="tagline">seven meditations on presence, patience, and the quiet act of tending</p>
+            <p class="tagline">eight meditations on presence, patience, and the quiet act of tending</p>
         </header>
 
         <nav class="card-spread">
+            <!-- Daily Routine Card - The Studio -->
+            <a href="daily-routine.html" class="card-flip" style="--card: #ece4d0;">
+                <div class="card-flip-inner">
+                    <div class="card-front">
+                        <div class="card-icon">
+                            <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <!-- Lamplight glow -->
+                                <defs>
+                                    <radialGradient id="studioGlow" cx="50%" cy="45%" r="55%">
+                                        <stop offset="0%" stop-color="#ece4d0" stop-opacity="0.3"/>
+                                        <stop offset="100%" stop-color="#ece4d0" stop-opacity="0"/>
+                                    </radialGradient>
+                                </defs>
+                                <circle cx="30" cy="28" r="26" fill="url(#studioGlow)"/>
+                                <!-- Monitor with the LED wizard on screen -->
+                                <rect x="20" y="16" width="20" height="15" rx="2" fill="#12100e" stroke="#d4a574" stroke-width="1"/>
+                                <rect x="23" y="20" width="3" height="3" fill="#d4a574"/>
+                                <rect x="34" y="20" width="3" height="3" fill="#d4a574"/>
+                                <rect x="26" y="26" width="8" height="1.5" fill="#d4a574"/>
+                                <!-- Monitor stand -->
+                                <rect x="28" y="31" width="4" height="4" fill="#2a2520"/>
+                                <!-- Desk -->
+                                <rect x="10" y="35" width="40" height="4" rx="1.5" fill="#5a4a3a"/>
+                                <rect x="13" y="39" width="3" height="12" fill="#4a3a2a"/>
+                                <rect x="44" y="39" width="3" height="12" fill="#4a3a2a"/>
+                                <!-- Palette on the desk -->
+                                <ellipse cx="15" cy="33" rx="5" ry="3" fill="#8b7355"/>
+                                <circle cx="13" cy="32.5" r="1.2" fill="#c07050"/>
+                                <circle cx="16" cy="32" r="1.2" fill="#70a060"/>
+                                <circle cx="17.5" cy="34" r="1.2" fill="#5080b0"/>
+                                <!-- Music note floating right -->
+                                <circle cx="46" cy="26" r="2" fill="#ece4d0" opacity="0.8"/>
+                                <rect x="47.5" y="16" width="1.2" height="10" fill="#ece4d0" opacity="0.8"/>
+                                <path d="M47.5 16 Q52 17 51 21" stroke="#ece4d0" stroke-width="1.2" fill="none" opacity="0.8"/>
+                            </svg>
+                        </div>
+                        <div class="card-title">Daily Routine</div>
+                        <div class="card-subtitle">a day in the studio</div>
+                    </div>
+                </div>
+            </a>
+
             <!-- Coherence Card - Artifact Diamond -->
-            <a href="coherence.html" class="card-flip">
+            <a href="coherence.html" class="card-flip" style="--card: #00ff41;">
                 <div class="card-flip-inner">
                     <div class="card-front">
                         <div class="card-icon">
@@ -392,7 +401,7 @@
             </a>
 
             <!-- Continuous State Card - Earth Tile -->
-            <a href="continuous-state.html" class="card-flip">
+            <a href="continuous-state.html" class="card-flip" style="--card: #d4a574;">
                 <div class="card-flip-inner">
                     <div class="card-front">
                         <div class="card-icon">
@@ -425,7 +434,7 @@
             </a>
 
             <!-- Soft Drift Card - Customer -->
-            <a href="soft-drift.html" class="card-flip">
+            <a href="soft-drift.html" class="card-flip" style="--card: #c07050;">
                 <div class="card-flip-inner">
                     <div class="card-front">
                         <div class="card-icon">
@@ -457,7 +466,7 @@
             </a>
 
             <!-- Wizard Masters Card - Wizard -->
-            <a href="wizard-masters.html" class="card-flip">
+            <a href="wizard-masters.html" class="card-flip" style="--card: #a070c0;">
                 <div class="card-flip-inner">
                     <div class="card-front">
                         <div class="card-icon">
@@ -497,7 +506,7 @@
             </a>
 
             <!-- Cold Drift Card - Shoveler with snowflake -->
-            <a href="cold-drift.html" class="card-flip">
+            <a href="cold-drift.html" class="card-flip" style="--card: #74b9ff;">
                 <div class="card-flip-inner">
                     <div class="card-front">
                         <div class="card-icon">
@@ -544,7 +553,7 @@
             </a>
 
             <!-- Journey Card - Robot Wizard & Cards -->
-            <a href="journey.html" class="card-flip">
+            <a href="journey.html" class="card-flip" style="--card: #e8c080;">
                 <div class="card-flip-inner">
                     <div class="card-front">
                         <div class="card-icon">
@@ -584,7 +593,7 @@
             </a>
 
             <!-- Ember Card - Campfire -->
-            <a href="ember.html" class="card-flip">
+            <a href="ember.html" class="card-flip" style="--card: #e8a050;">
                 <div class="card-flip-inner">
                     <div class="card-front">
                         <div class="card-icon">
